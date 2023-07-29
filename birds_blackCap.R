@@ -263,7 +263,11 @@ p.open <- param.open[[3]]
 phi.open_juve <- param.open[[1]]
 phi.open_adul <- param.open[[2]]
 
+cat('Constant recapture probability is:','\n')
+cat(p.open)
 
+cat(phi.open_juve)
+cat(phi.open_adul)
 #blackcap <- matrix(0, nrow = 4, ncol = 5)
 #blackcap[1, 1] <- 0
 #blackcap[1, 2] <- 1
