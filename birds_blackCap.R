@@ -201,6 +201,8 @@ for(j in 1:nrow(blackcap)){
   }
 }
 
+
+## creating a age matrix
 age <- matrix(0, nrow = nrow(blackcap), ncol = occassions)
 
 for(i in 1:nrow(yearly_blackcap)){
@@ -220,8 +222,10 @@ for(i in 1:nrow(yearly_blackcap)){
     
   }
 }
+
+## Printing the age matrix
 print(age)
-theta.closed <- rep(1, T+1)
+
 
 ## Getting MLE for theta
 #theta.closed <- log.mle.closed(theta.closed, blackcap, T)
@@ -250,7 +254,7 @@ theta.closed <- rep(1, T+1)
 
 n <- nrow(yearly_blackcap)
 T <- ncol(yearly_blackcap)
-theta.open <- rep(0.99, T+1)
+theta.open <- runif(T+1)
 
 
 ## Getting MLE for theta for open population
@@ -265,9 +269,14 @@ phi.open_adul <- param.open[[2]]
 
 cat('Constant recapture probability is:','\n')
 cat(p.open)
-
+cat('Juvenile survival probability is:','\n')
 cat(phi.open_juve)
+cat('Adult survival probability is:','\n')
 cat(phi.open_adul)
+
+
+## Below Example array taken from the book Analysis of capture-recapture data
+## by morgan and MCcrea to check the functioning of m-arrays
 #blackcap <- matrix(0, nrow = 4, ncol = 5)
 #blackcap[1, 1] <- 0
 #blackcap[1, 2] <- 1
@@ -293,11 +302,20 @@ cat(phi.open_adul)
 #blackcap[4, 4] <- 1
 #blackcap[4, 5] <- 1
 
-
+## creating a empty m-array matrix
 m <- matrix(0, nrow = T-1, ncol = T)
+
+## Calculating total number of capture in each capture occasion
 total_cap <- colSums(yearly_blackcap)
+
+## Storing the results in first column of m-array
 m[,1] <- total_cap[-length(total_cap)]
+
+## Creating array for the birds that were never captured
 NCap <- rep(0, T-1)
+
+## Below for-loop compares capture occasion i with capture occasions from i+1 
+## till T(Last capture occasion)
 for (i in 1:(T-1)) {
   init_capidx <- yearly_blackcap[, i]
   totalCap <- m[i, 1]
@@ -318,6 +336,7 @@ for (i in 1:(T-1)) {
   }
   NCap[i] <- totalCap
 }
+## Combining the m-array with the  
 m <- cbind(m, NCap)
 # Print the m-array
 print(m)
@@ -325,12 +344,13 @@ print(m)
 ## Calculating the observed probabilities in m-array
 for (i in 1:(T-1)) {
   R <- m[i,1]
-  
+    ## Skipping if the total captured on occasion i==0 
     if(R==0){
       next
     }
     
     else{
+      ## Calculating the observed probability
       m[i,-1] <- m[i,-1]/R
     }
 }
@@ -340,7 +360,7 @@ for (i in 1:(T-1)) {
 print(m)
 
 
-## Calculating the expected probabilities
+## Calculating the expected m-array
 ex_m <- matrix(0, nrow = T-1, ncol = T)
 ex_m[,1] <- m[,1]
 N_exm <- rep(0, T-1)

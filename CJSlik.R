@@ -42,7 +42,7 @@ CJSlik <- function(theta, x, f, l, n, age, T) {
         if(age[i,t]==1){
           phi[t] <- exp(a[t])/(1+exp(a[t]))
         }
-        else if(age[i,t]==2){
+        else{
           phi[t] <- exp(a[t] + b)/(1+exp(a[t] + b))
         }
         lik[i] <- lik[i] + log(phi[t]) + x[i,t+1]*log(p) + (1-x[i,t+1])*log(1-p)
@@ -98,12 +98,20 @@ log.mle.open <- function(theta, x, age){
   diff <- 1
   ## Setting the tolerance value between new and old parameters
   eps <- 1e-3
+  
+  ## performing optim till diff becomes less than eps
   while(diff > eps){
+    ## storing the estimate to check the difference 
     theta.old <- theta
-  res <- optim(par = theta.old, fn = CJSlik, x=x, 
+    
+    ## Using the optim to get MLE
+    res <- optim(par = theta.old, fn = CJSlik, x=x, 
     n=n, f=f, l=l, age=age, T=T)
-  theta <- res$par
-  diff <- sum(abs(theta-theta.old))
+    
+    ## Storing the estimate MLEs
+    theta <- res$par
+    ## updating the absolute difference between old and new estimates
+    diff <- sum(abs(theta-theta.old))
   }
   ## Returning the estimated parameters 
   return(theta)
@@ -111,32 +119,37 @@ log.mle.open <- function(theta, x, age){
 
 ## Function to get parameter estimate based on MLE
 popEstimate.open <- function(theta, T){
-  
+  ## Getting the alpha and beta from the estimated parameter theta
   alpha <- theta[1:(T-1)]
   beta <- theta[T]
   
+  ## Calculating the juvenile and adult survival probabilities based on 
+  ## logit phi = a (for juvenile) and for adult logit phi = alpha + beta
   phi_juve <- exp(alpha)/(1+exp(alpha))
   phi_adul <- exp(alpha + beta)/(1+exp(alpha + beta)) 
+  
+  ## Getting the constant recapture probability
   p <- exp(theta[T+1])/(1+exp(theta[T+1]))
   
+  ## Returining the parameters in a list format
   return(list(phi_juve, phi_adul, p))
 }
 
-# Function to perform bootstrapping and calculate bootstrap intervals
+## Function to perform bootstrapping and calculate bootstrap intervals
 bootstrap_intervals.open <- function(data, T, n_bootstrap, age) {
-  # data: Capture-recapture data
-  # T: Number of capture occasions
-  # n_bootstrap: Number of bootstrap samples
+  ## data: Capture-recapture data
+  ## T: Number of capture occasions
+  ## n_bootstrap: Number of bootstrap samples
   
-  # Set the seed for reproducibility
+  ## Set the seed for reproducibility
   set.seed(123)
   
-  # Number of observed individuals
+  ## Total Number of observed individuals
   n <- nrow(data)
   
-  # Number of parameters 
+  ## Number of parameters to estimate 
   n_params <- T+1
-  # Initialize a matrix to store the bootstrap parameter estimates
+  ## Initialize a matrix to store the bootstrap parameter estimates
   bootstrap_estimates <- matrix(0, nrow = n_bootstrap, ncol = n_params)
   
   ## Perform bootstrapping
@@ -156,15 +169,19 @@ bootstrap_intervals.open <- function(data, T, n_bootstrap, age) {
     # Estimate the MLE using the bootstrap sample
     #bootstrap_mle <- optim(par = theta_init, fn = CJSlik, x=bootstrap_sample, 
                     #n=n, f=f, l=l, age=age, T=T, control=list(maxit = 5000))
+    
+    ## Getting the estimate for bootstrapped sample
     bootstrap_mle <- log.mle.open(theta_init, bootstrap_sample, age)
+    
+    ## Storing the results in the i-th row
     bootstrap_estimates[j, ] <- unlist(bootstrap_mle)
   }
   
-  # Calculate the bootstrap intervals and mean for the estimates
+  ## Calculating the bootstrap intervals and mean for the estimates
   bootstrap_lower <- apply(bootstrap_estimates, 2, quantile, probs = 0.025)
   mean <- apply(bootstrap_estimates, 2, mean)
   bootstrap_upper <- apply(bootstrap_estimates, 2, quantile, probs = 0.975)
   
-  # Return the bootstrap intervals
+  ## Returning the bootstrap intervals
   list(lower = bootstrap_lower, mean = mean, upper = bootstrap_upper)
 }
