@@ -150,8 +150,10 @@ bootstrap_intervals.open <- function(data, T, n_bootstrap, age) {
   
   ## Perform bootstrapping
   for (j in 1:n_bootstrap) {
+    
+    indices <- sample(1:round(n/2), size = n+10, replace = TRUE)
     ## Generating a bootstrap sample by resampling from the original data
-    bootstrap_sample <- data[sample(n, replace = TRUE), ]
+    bootstrap_sample <- data[indices, ]
     ## Initialize the parameter values for optimization
     theta_init <- rnorm(n_params)
     
@@ -164,7 +166,7 @@ bootstrap_intervals.open <- function(data, T, n_bootstrap, age) {
     for (i in 1:n){l[i] <- which(bootstrap_sample[i,]>=1)[length(which(bootstrap_sample[i,]>=1))]}
     # Estimate the MLE using the bootstrap sample
     bootstrap_mle <- optim(par = theta_init, fn = CJSlik, x=bootstrap_sample, 
-                    n=n, f=f, l=l, age=age, T=T, method = 'SANN')
+                    n=n, f=f, l=l, age=age[indices, ], T=T, method = 'SANN')
     
     ## Getting the estimate for bootstrapped sample
     #bootstrap_mle <- log.mle.open(theta_init, bootstrap_sample, age)
