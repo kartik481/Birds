@@ -18,7 +18,7 @@ source("~/Documents/Birds/CJSlik.R")
 
 
 chifchaf <- read.csv("~/Documents/Birds/CR.chifchaf_FixRing.csv", sep =';'
-                     ,header=TRUE)
+                  ,header=TRUE)
 
 ## Printing the dimensions of the chifchaf DataFrame
 cat("Dimension of chifchaf data is:", dim(chifchaf))
@@ -41,12 +41,12 @@ cat("No. of zeros in data are:", zeros)
 chifchaf <- chifchaf[rowSums(chifchaf[, -ncol(chifchaf)] != 0) > 0, ]
 
 ## Getting unique value
-ageRing <- unique(chifchaf$age_at_ringing)
-cat("No. of unique values in age_at_ringing:",ageRing)
+age.chifchafRing <- unique(chifchaf$age.chifchaf_at_ringing)
+cat("No. of unique values in age.chifchaf_at_ringing:",age.chifchafRing)
 
 
 ## Getting the rows numbers where unkown is present and removing them
-rowNum <- which(chifchaf$age_at_ringing == "Unknown")
+rowNum <- which(chifchaf$age.chifchaf_at_ringing == "Unknown")
 cat("Number of rows with unknown:",length(rowNum))
 
 ## Strong unknown observations in a separate dataFrame
@@ -59,15 +59,15 @@ chifchaf <- chifchaf[-rowNum, ]
 
 
 ## Plotting to see adults and juvenile cases
-ggplot(chifchaf, aes(x = age_at_ringing)) +
+ggplot(chifchaf, aes(x = age.chifchaf_at_ringing)) +
   geom_bar(width = 0.5, color = "white", fill = "lightblue") +
   labs(title = "Histogram", x = "Values", y = "Frequency") +
   theme_minimal()
 
 
 ## Create separate data frames for adults and juveniles
-adultschifchaf <- chifchaf[chifchaf$age_at_ringing == "adult", ]
-juvenileschifchaf <- chifchaf[chifchaf$age_at_ringing == "juvenile", ]
+adultschifchaf <- chifchaf[chifchaf$age.chifchaf_at_ringing == "adult", ]
+juvenileschifchaf <- chifchaf[chifchaf$age.chifchaf_at_ringing == "juvenile", ]
 
 ## Printing the number of adults and juveniles
 cat('No. of adults in chifchaf:', nrow(adultschifchaf),'\n')
@@ -86,10 +86,10 @@ freq_1 <- apply(chifchaf, 1, function(x) sum(x == 1))
 ## Creating a dataFrame for plotting
 df <- data.frame(Bird = paste0("Bird ", 1:nrow(chifchaf)),
                  Frequency_1 = freq_1,
-                 Age = chifchaf$age_at_ringing)
+                 age.chifchaf = chifchaf$age.chifchaf_at_ringing)
 
 ## Creating a density plot 
-ggplot(df, aes(x = Frequency_1, fill = Age, color = Age)) +
+ggplot(df, aes(x = Frequency_1, fill = age.chifchaf, color = age.chifchaf)) +
   geom_density(alpha = 0.5) +
   xlab("Frequency 1") +
   ylab("Density") +
@@ -124,7 +124,7 @@ plot(1:length(individualCaptureHistory), individualCaptureHistory, type = "b",
 
 
 
-## Removing the last column(age at ringing) from the adult and juvenile data
+## Removing the last column(age.chifchaf at ringing) from the adult and juvenile data
 adultschifchaf <- adultschifchaf[, -ncol(adultschifchaf)]
 juvenileschifchaf <-juvenileschifchaf[, -ncol(juvenileschifchaf)]
 
@@ -142,7 +142,7 @@ plotchifchafjuve$CapSum <- rowSums(plotchifchafjuve)
 plotchifchafadul$CapSum <- rowSums(plotchifchafadul)
 
 
-
+## generating the month names from October 2007 to April 2018 
 Months <- seq(as.Date("2007-10-01"), as.Date("2018-04-01"), by = "months")
 
 # Exclude specific months from the sequence
@@ -167,7 +167,7 @@ p <- ggplot(combData_long, aes(x = Month, y = Captured, color = Group)) +
   geom_point() + geom_line() +
   xlab("Months (October 2007 to April 2018)") +
   ylab("No. of captured (per session)") +
-  ggtitle("chifchaf's captured over different sessions") +
+  ggtitle("chifchaf captured over different sessions") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
         plot.title = element_text(hjust = 0.5))
@@ -183,14 +183,23 @@ print(p)
 ########################### Model fitting check ################################
 
 ########################### Closed population ##################################
-# Create a new data frame to store the yearly capture-recapture data
-n <- 77
-occassions <- floor(n / 7)
-age_ring <- chifchaf$age_at_ringing
 
+
+n <- 77                                ## Total no initial occasions
+occassions <- floor(n / 7)             ## Inter-winter period spans for 7 months
+## So dividing by 7 to convert to yearly
+
+## Storing age at initial ringing
+age.chifchaf_ring <- chifchaf$age.chifchaf_at_ringing
+
+## Removing the last column
 chifchaf <- chifchaf[,-ncol(chifchaf)]
 
+# Create a new data frame to store the yearly capture-recapture data
 yearly_chifchaf <- matrix(0, nrow = nrow(chifchaf), ncol = occassions)
+
+## This loop sum over first 7 months, then 7... till last occasion and store it 
+## in new matrix
 for(j in 1:nrow(chifchaf)){
   for (i in 1:occassions) {
     start_idx <- (i - 1) * 7 + 1
@@ -200,198 +209,71 @@ for(j in 1:nrow(chifchaf)){
     yearly_chifchaf[j, i] <- product
   }
 }
+## Getting the total number of birds captured yearly
 cat('Birds captured over different inter-winter sessions','\n')
 cat(colSums(yearly_chifchaf))
 
-## creating a age matrix
-age <- matrix(0, nrow = nrow(chifchaf), ncol = occassions)
+## creating a age.chifchaf matrix to store age according to time
+age.chifchaf <- matrix(0, nrow = nrow(chifchaf), ncol = occassions)
 
+## Lopping over the data, if age at ringing at juvenile at first then keeping
+## that time 1 otherwise after that it's gonna adult so adding 2 to show bird has
+## become adult 
 for(i in 1:nrow(yearly_chifchaf)){
-  age_at_i <- age_ring[i]
-  if(age_at_i=='adult'){
+  age.chifchaf_at_i <- age.chifchaf_ring[i]
+  if(age.chifchaf_at_i=='adult'){
     first_cap <- which(yearly_chifchaf[i,]>=1)[1]
-    age[i, first_cap:occassions] <- age[i, first_cap:occassions]+2
+    age.chifchaf[i, first_cap:occassions] <- age.chifchaf[i, first_cap:occassions]+2
     
   }
-  else if (age_at_i=='juvenile'){
+  else if (age.chifchaf_at_i=='juvenile'){
     first_cap <- which(yearly_chifchaf[i,]>=1)[1]
-    age[i, first_cap] <- 1
+    age.chifchaf[i, first_cap] <- 1
     if(first_cap+1>11){
       next
     }
-    age[i, (first_cap+1):occassions] <- age[i, (first_cap+1):occassions]+2
+    age.chifchaf[i, (first_cap+1):occassions] <- age.chifchaf[i, (first_cap+1):occassions]+2
     
   }
 }
 
-## Printing the age matrix
-print(age)
+## Printing the age.chifchaf matrix
+print(age.chifchaf)
 
 
-## Getting MLE for theta
-#theta.closed <- log.mle.closed(theta.closed, chifchaf, T)
-
-## Getting the parameters estimates
-#p.closed <- popEstimate(theta.closed)
-
-## Calculating the sufficient statistics for obsevred data 
-#observed.closed <-  colSums(chifchaf)
-
-## Calculating expected individuals monthly
-## Calculating the expected captures in a month
-#total_individuals.closed <- p.closed
-#expected.closed <- theta.closed * total_individuals.closed
-#expected.closed <- round(expected.closed[-length(expected.closed)])
-
-## Pearson chi-square test between observed and expected
-#chi_square_test.closed <- chisq.test(observed.closed, expected.closed)
-
-## Print the chi-square test results
-#cat("Chi-square test:","\n")
-#chi_square_test.closed
-
-########################### Open population check ##############################
-
-
-n <- nrow(yearly_chifchaf)
-T <- ncol(yearly_chifchaf)
-theta.open <- runif(T+1)
+n <- nrow(yearly_chifchaf)            ## Total no of birds
+T <- ncol(yearly_chifchaf)            ## Total no. of capture occasions
+theta.open <- runif(T+1)           ## Initialising the parameters
 
 
 ## Getting MLE for theta for open population
-theta.open <- log.mle.open(theta.open, yearly_chifchaf, age)
+theta.open.chifchaf <- log.mle.open(theta.open, yearly_chifchaf, age.chifchaf.chifchaf)
 
 ## Getting the parameters estimates
-param.open <- popEstimate.open(theta.open, T)
+param.open.chifchaf <- popEstimate.open(theta.open.chifchaf, T)
 
-p.open <- param.open[[3]]
-phi.open_juve <- param.open[[1]]
-phi.open_adul <- param.open[[2]]
+p.open.chifchaf <- param.open.chifchaf[[3]]
+phi.open_juve.chifchaf <- param.open.chifchaf[[1]]
+phi.open_adul.chifchaf <- param.open.chifchaf[[2]]
 
-cat('Constant recapture probability is:','\n')
-cat(p.open)
-cat('Juvenile survival probability is:','\n')
-cat(phi.open_juve)
-cat('Adult survival probability is:','\n')
-cat(phi.open_adul)
+## Printing the results
+cat('Constant recapture probability is: \n')
+cat(p.open.chifchaf,'\n')
+cat('Juvenile survival probability is: \n')
+cat(phi.open_juve.chifchaf,'\n')
+cat('Adult survival probability is: \n')
+cat(phi.open_adul.chifchaf,'\n')
 
+###################### Absolute goodness of fit test ###########################
 
-## Below Example array taken from the book Analysis of capture-recapture data
-## by morgan and MCcrea to check the functioning of m-arrays
-#chifchaf <- matrix(0, nrow = 4, ncol = 5)
-#chifchaf[1, 1] <- 0
-#chifchaf[1, 2] <- 1
-#chifchaf[1, 3] <- 0
-#chifchaf[1, 4] <- 1
-#chifchaf[1, 5] <- 1
-
-#chifchaf[2, 1] <- 0
-#chifchaf[2, 2] <- 1
-#chifchaf[2, 3] <- 0
-#chifchaf[2, 4] <- 1
-#chifchaf[2, 5] <- 0
-
-#chifchaf[3, 1] <- 1
-#chifchaf[3, 2] <- 1
-#chifchaf[3, 3] <- 0
-#chifchaf[3, 4] <- 1
-#chifchaf[3, 5] <- 1
-
-#chifchaf[4, 1] <- 1
-#chifchaf[4, 2] <- 1
-#chifchaf[4, 3] <- 1
-#chifchaf[4, 4] <- 1
-#chifchaf[4, 5] <- 1
-
-## creating a empty m-array matrix
-m <- matrix(0, nrow = T-1, ncol = T)
-
-## Calculating total number of capture in each capture occasion
-total_cap <- colSums(yearly_chifchaf)
-
-## Storing the results in first column of m-array
-m[,1] <- total_cap[-length(total_cap)]
-
-## Creating array for the birds that were never captured
-NCap <- rep(0, T-1)
-
-## Below for-loop compares capture occasion i with capture occasions from i+1 
-## till T(Last capture occasion)
-for (i in 1:(T-1)) {
-  init_capidx <- yearly_chifchaf[, i]
-  totalCap <- m[i, 1]
-  for (j in (i+1):T) {
-    cap_idx <- yearly_chifchaf[, j]
-    if (totalCap > 0 & sum(init_capidx ==1 & cap_idx==1)<=totalCap) {
-      m[i, j] <- sum(init_capidx ==1 & cap_idx==1)
-      totalCap <- totalCap - m[i, j]
-    } 
-    else if(totalCap>=0 & sum(init_capidx==1 & cap_idx==1)>totalCap)
-    {
-      m[i,j] <- totalCap
-      totalCap <- totalCap - m[i, j]
-    }
-    else {
-      m[i, j] <- 0
-    }
-  }
-  NCap[i] <- totalCap
-}
-## Combining the m-array with the  
-m <- cbind(m, NCap)
-# Print the m-array
-print(m)
-
-## Calculating the observed probabilities in m-array
-for (i in 1:(T-1)) {
-  R <- m[i,1]
-  ## Skipping if the total captured on occasion i==0 
-  if(R==0){
-    next
-  }
-  
-  else{
-    ## Calculating the observed probability
-    m[i,-1] <- m[i,-1]/R
-  }
-}
+## Calculating m-array probabilities for observed based on multinational assumption
+m <- m_array(yearly_chifchaf, T)
 
 
-## Printing the converted m-array probabilities
-print(m)
+R <- unlist(colSums(yearly_chifchaf)[-T])
+## Calculating the expected probabilities
+ex_m <- expected_m_array(R ,phi.open_adul.chifchaf, p.open.chifchaf, T)
 
-
-## Calculating the expected m-array
-ex_m <- matrix(0, nrow = T-1, ncol = T)
-ex_m[,1] <- m[,1]
-N_exm <- rep(0, T-1)
-for (i in 1:(T-2)) 
-{
-  ex_m[i, (i+1) ] <- m[i,1] * phi.open[i] * p.open
-  for (j in (i+2):T) 
-  {
-    ex_m[i, j] <-  ex_m[i, (j-1)] * (1-p.open) * phi.open[j-1]
-  }
-  N_exm[i] <- m[i,1] - sum(ex_m[i,-1]) 
-}
-## For last row
-ex_m[T-1, T] <- m[T-1, 1] * phi.open[T-1] * p.open
-N_exm[T-1] <- m[T-1, 1] - sum(ex_m[T-1,-1])
-
-ex_m <- cbind(ex_m, N_exm)
-print(ex_m)
-
-for (i in 1:(T-1)) {
-  R <- m[i,1]
-  
-  if(R==0){
-    next
-  }
-  
-  else{
-    ex_m[i,-1] <- ex_m[i,-1]/R
-  }
-}
 ## Removing the first column from observed and expected m-arrays
 m <- m[,-1]
 ex_m <- ex_m[,-1]
@@ -416,9 +298,9 @@ df <- 47           #2924(for monthly data)
 critical_value <- qchisq(1 - alpha, df)
 cat("Critical value is:", critical_value)
 
-
+############################ Confidence intervals ##############################
 ## Calculating 95% CI for juveniles population for 300 samples
-ci <- bootstrap_intervals.open(yearly_chifchaf, T, 100, age)
+ci.chifchaf <- bootstrap_intervals.open(yearly_chifchaf, T, 200, age.chifchaf)
 cat("95% CI for total popultion is:")
 cat(ci)
 
@@ -443,16 +325,42 @@ p.cons.upper <-  param.open.upper[[3]]
 
 
 
-# Create a data frame to store the parameter estimates and corresponding 
+## Creating a data frame to store the parameter estimates and corresponding 
 ## confidence intervals for juveniles
 parameter_df <- data.frame(Estimate = param.open.juve ,
                            CI_lower = param.open.juve.lower,
                            CI_upper = param.open.juve.upper)
 
-
+## Plotting the survivial probabilities with error bars
 
 ggplot(parameter_df, aes(x = as.factor(1:10), y = )) +
   geom_violin(trim=FALSE)+geom_boxplot(width = 0.5, position = position_dodge(width = 0.75), color = "black", alpha = 0.5) +
   geom_pointrange(aes(ymin = CI_lower, ymax = CI_upper), width = 0.2, position = position_dodge(width = 0.75), color = "red") +
   labs(x = "Parameter", y = "Estimate") +
   ggtitle("Violin Plots of Parameter Estimates with 95% Confidence Intervals")
+
+
+############################ Closed population model ##########################
+
+#theta.closed <- runif(T+1)
+## Getting MLE for theta
+#theta.closed <- log.mle.closed(theta.closed, yearly_chifchaf, T)
+
+## Getting the parameters estimates
+#p.closed <- popEstimate(theta.closed)
+
+## Calculating the sufficient statistics for obsevred data 
+#observed.closed <-  colSums(yearly_chifchaf)
+
+## Calculating expected individuals monthly
+## Calculating the expected captures in a year
+#total_individuals.closed <- p.closed
+#expected.closed <- theta.closed * total_individuals.closed
+#expected.closed <- round(expected.closed[-length(expected.closed)])
+
+## Pearson chi-square test between observed and expected
+#chi_square_test.closed <- chisq.test(observed.closed, expected.closed)
+
+## Print the chi-square test results
+#cat("Chi-square test:","\n")
+#chi_square_test.closed

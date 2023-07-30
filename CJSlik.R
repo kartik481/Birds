@@ -189,3 +189,128 @@ bootstrap_intervals.open <- function(data, T, n_bootstrap, age) {
   ## Returning the bootstrap intervals
   list(lower = bootstrap_lower, mean = mean, upper = bootstrap_upper, SE=se_estimates)
 }
+
+## Function for creating m-arrays and observed proabilities
+m_array <- function(yearly_data, T){
+  
+  ## Below Example array taken from the book Analysis of capture-recapture data
+  ## by morgan and MCcrea to check the functioning of m-arrays
+  #yearly_data <- matrix(0, nrow = 4, ncol = 5)
+  #yearly_data[1, 1] <- 0
+  #yearly_data[1, 2] <- 1
+  #yearly_data[1, 3] <- 0
+  #yearly_data[1, 4] <- 1
+  #yearly_data[1, 5] <- 1
+  
+  #yearly_data[2, 1] <- 0
+  #yearly_data[2, 2] <- 1
+  #yearly_data[2, 3] <- 0
+  #yearly_data[2, 4] <- 1
+  #yearly_data[2, 5] <- 0
+  
+  #yearly_data[3, 1] <- 1
+  #yearly_data[3, 2] <- 1
+  #yearly_data[3, 3] <- 0
+  #yearly_data[3, 4] <- 1
+  #yearly_data[3, 5] <- 1
+  
+  #yearly_data[4, 1] <- 1
+  #yearly_data[4, 2] <- 1
+  #yearly_data[4, 3] <- 1
+  #yearly_data[4, 4] <- 1
+  #yearly_data[4, 5] <- 1
+  
+  ## creating a empty m-array matrix
+  m <- matrix(0, nrow = T-1, ncol = T)
+  
+  ## Calculating total number of capture in each capture occasion
+  total_cap <- colSums(yearly_data)
+  
+  ## Storing the results in first column of m-array
+  m[,1] <- total_cap[-length(total_cap)]
+  
+  ## Creating array for the birds that were never captured
+  NCap <- rep(0, T-1)
+  
+  ## Below for-loop compares capture occasion i with capture occasions from i+1 
+  ## till T(Last capture occasion)
+  for (i in 1:(T-1)) {
+    init_capidx <- yearly_data[, i]
+    totalCap <- m[i, 1]
+    for (j in (i+1):T) {
+      cap_idx <- yearly_data[, j]
+      if (totalCap > 0 & sum(init_capidx ==1 & cap_idx==1)<=totalCap) {
+        m[i, j] <- sum(init_capidx ==1 & cap_idx==1)
+        totalCap <- totalCap - m[i, j]
+      } 
+      else if(totalCap>=0 & sum(init_capidx==1 & cap_idx==1)>totalCap)
+      {
+        m[i,j] <- totalCap
+        totalCap <- totalCap - m[i, j]
+      }
+      else {
+        m[i, j] <- 0
+      }
+    }
+    NCap[i] <- totalCap
+  }
+  ## Combining the m-array with the birds never sighted again array  
+  m <- cbind(m, NCap)
+  
+  ## Calculating the observed probabilities in m-array
+  for (i in 1:(T-1)) {
+    R <- m[i,1]
+    ## Skipping if the total captured on occasion i==0 
+    if(R==0){
+      next
+    }
+    
+    else{
+      ## Calculating the observed probability
+      m[i,-1] <- m[i,-1]/R
+    }
+  }
+  
+  
+  ## returning the converted m-array probabilities
+  return(m)
+}
+
+## Function to create expected m-array
+expected_m_array <- function(m, phi.open, p.open, T){
+  
+  ## Creating a empty matrix for 
+  ex_m <- matrix(0, nrow = T-1, ncol = T)
+  ## Getting the numbers of birds captured in each occasion from m
+  ex_m[,1] <- m
+  N_exm <- rep(0, T-1)
+  ## Calculating the expected m-array
+  for (i in 1:(T-2)) 
+  {
+    ex_m[i, (i+1) ] <- m[i] * phi.open[i] * p.open
+    for (j in (i+2):T) 
+    {
+      ex_m[i, j] <-  ex_m[i, (j-1)] * (1-p.open) * phi.open[j-1]
+    }
+    N_exm[i] <- m[i] - sum(ex_m[i,-1]) 
+  }
+  ## For last row
+  ex_m[T-1, T] <- m[T-1] * phi.open[T-1] * p.open
+  N_exm[T-1] <- m[T-1] - sum(ex_m[T-1,-1])
+  
+  ## Combining expected m-array with expected never captured again
+  ex_m <- cbind(ex_m, N_exm)
+  
+  for (i in 1:(T-1)) {
+    R <- m[i]
+    
+    if(R==0){
+      next
+    }
+    
+    else{
+      ex_m[i,-1] <- ex_m[i,-1]/R
+    }
+  }
+  return(ex_m)
+}
