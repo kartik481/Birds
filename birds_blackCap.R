@@ -200,7 +200,8 @@ for(j in 1:nrow(blackcap)){
     yearly_blackcap[j, i] <- product
   }
 }
-
+cat('Birds captured over different inter-winter sessions','\n')
+cat(colSums(yearly_blackcap))
 
 ## creating a age matrix
 age <- matrix(0, nrow = nrow(blackcap), ncol = occassions)
@@ -254,7 +255,7 @@ print(age)
 
 n <- nrow(yearly_blackcap)
 T <- ncol(yearly_blackcap)
-theta.open <- runif(T+1)
+theta.open <- rnorm(T+1)
 
 
 ## Getting MLE for theta for open population
