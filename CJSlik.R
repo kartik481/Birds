@@ -180,6 +180,12 @@ bootstrap_intervals.open <- function(data, T, n_bootstrap, age) {
   mean <- apply(bootstrap_estimates, 2, mean)
   bootstrap_upper <- apply(bootstrap_estimates, 2, quantile, probs = 0.975)
   
+  # Calculate the standard deviation of the bootstrap estimates
+  sd_estimates <- apply(bootstrap_estimates, 2, sd)
+  
+  # Calculate the standard error (SE) for each estimate
+  se_estimates <- sd_estimates / sqrt(nrow(bootstrap_estimates))
+  
   ## Returning the bootstrap intervals
-  list(lower = bootstrap_lower, mean = mean, upper = bootstrap_upper)
+  list(lower = bootstrap_lower, mean = mean, upper = bootstrap_upper, SE=se_estimates)
 }
