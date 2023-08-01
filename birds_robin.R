@@ -180,7 +180,6 @@ p <- p + scale_x_continuous(breaks = custom_breaks, labels = custom_labels)
 ## Printing the plot
 print(p)
 
-########################### Model fitting check ################################
 
 
 
@@ -212,6 +211,33 @@ for(j in 1:nrow(robin)){
 cat('Birds captured over different inter-winter sessions','\n')
 cat(colSums(yearly_robin))
 
+
+n <- nrow(yearly_robin)            ## Total no of birds
+T <- ncol(yearly_robin)            ## Total no. of capture occasions
+theta.open <- rnorm(T)           ## Initialising the parameters
+
+
+
+## Getting MLE for theta for open population
+theta.open.robin.cons <- log.mle.open(theta.open, yearly_robin)
+
+## creating empty arrays to store initial and final capture occasions
+f <- rep(0, n)
+l <- rep(0, n)
+## Stores first individual is observed
+for (i in 1:n){f[i] <- which(yearly_robin[i,]>=1)[1]}
+## Storing the last time individual is observed
+for (i in 1:n){l[i] <- which(yearly_robin[i,]>=1)[length(which(yearly_robin[i,]>=1))]}
+## Caluclating the vale of log_likeihood at MLE
+log_lik <- CJSlik(theta.open.robin.cons, yearly_robin, f, l, n, T)
+## Getting the AIC 
+AIC_cons <- AIC(log_lik, 11)
+cat("AIC for age independent model:", AIC_cons)
+
+
+
+##################### Introducing age dependent CJS-model ######################
+
 ## creating a age matrix to store age according to time
 age <- matrix(0, nrow = nrow(robin), ncol = occassions)
 
@@ -242,15 +268,29 @@ print(age)
 
 n <- nrow(yearly_robin)            ## Total no of birds
 T <- ncol(yearly_robin)            ## Total no. of capture occasions
-theta.open <- runif(T+1)           ## Initialising the parameters
+theta.open <- rnorm(T+1)           ## Initialising the parameters
 
 
 ## Getting MLE for theta for open population
-theta.open.robin <- log.mle.open(theta.open, yearly_robin, age)
+theta.open.robin <- log.mle.open.age(theta.open, yearly_robin, age)
+
+## creating empty arrays to store initial and final capture occasions
+f <- rep(0, n)
+l <- rep(0, n)
+## Stores first individual is observed
+for (i in 1:n){f[i] <- which(yearly_robin[i,]>=1)[1]}
+## Storing the last time individual is observed
+for (i in 1:n){l[i] <- which(yearly_robin[i,]>=1)[length(which(yearly_robin[i,]>=1))]}
+## Caluclating the vale of log_likeihood at MLE
+log_lik_age <- CJSlik_age(theta.open.robin, yearly_robin, f, l, n, age, T)
+## Getting the AIC 
+AIC_age <- AIC(log_lik_age, 12)
+cat("AIC for age dependent model:", AIC_age)
 
 ## Getting the parameters estimates
 param.open.robin <- popEstimate.open(theta.open.robin, T)
 
+## Extracting the paramters
 p.open.robin <- param.open.robin[[3]]
 phi.open_juve.robin <- param.open.robin[[1]]
 phi.open_adul.robin <- param.open.robin[[2]]
@@ -286,7 +326,7 @@ ex_m_adul <- ex_m_adul[,-1]
 chi_square_test.open.juve <- chisq.test(table(m, ex_m_juve), simulate.p.value = TRUE)
 
 ## Fisher test for robin dataset
-fisher.test(matrix(cbind(m, ex_m_juve), nrow=n), simulate.p.value = TRUE)
+fisher.test(table(m, ex_m_juve), simulate.p.value = TRUE)
 ## Printing the chi-square test results
 cat("Chi-square test statistic for juveniles:","\n")
 chi_square_test.open.juve
