@@ -1,6 +1,7 @@
 ## Printing message to confirm if we have linked files successfully
 cat('Loaded functions open population file successfully')
 
+## Function to calculate the CJS likelihood
 CJSlik <- function(theta, x, f, l, n, age, T) {
   
   # The data are stored in the array x; 
@@ -132,7 +133,7 @@ popEstimate.open <- function(theta, T){
 }
 
 ## Function to perform bootstrapping and calculate bootstrap intervals
-bootstrap_intervals.open <- function(data, T, n_bootstrap, age) {
+bootstrap_intervals.open <- function(theta, data, T, n_bootstrap, age) {
   ## data: Capture-recapture data
   ## T: Number of capture occasions
   ## n_bootstrap: Number of bootstrap samples
@@ -151,28 +152,28 @@ bootstrap_intervals.open <- function(data, T, n_bootstrap, age) {
   ## Perform bootstrapping
   for (j in 1:n_bootstrap) {
     
-    indices <- sample(1:round(n/2), size = n+10, replace = TRUE)
+    indices <- sample(1:n, size = n, replace = TRUE)
     ## Generating a bootstrap sample by resampling from the original data
     bootstrap_sample <- data[indices, ]
     ## Initialize the parameter values for optimization
-    theta_init <- rnorm(n_params)
+    theta_init <- theta
     
     ## creating empty arrays to store initial and final capture occasions
     f <- rep(0, n)
     l <- rep(0, n)
     ## Stores first individual is observed
-    for (i in 1:n){f[i] <- which(bootstrap_sample[i,]>=1)[1]}
+    #for (i in 1:n){f[i] <- which(bootstrap_sample[i,]>=1)[1]}
     ## Storing the last time individual is observed
-    for (i in 1:n){l[i] <- which(bootstrap_sample[i,]>=1)[length(which(bootstrap_sample[i,]>=1))]}
+    #for (i in 1:n){l[i] <- which(bootstrap_sample[i,]>=1)[length(which(bootstrap_sample[i,]>=1))]}
     # Estimate the MLE using the bootstrap sample
-    bootstrap_mle <- optim(par = theta_init, fn = CJSlik, x=bootstrap_sample, 
-                    n=n, f=f, l=l, age=age[indices, ], T=T, method = 'SANN')
+    #bootstrap_mle <- optim(par = theta_init, fn = CJSlik, x=bootstrap_sample, 
+                    #n=n, f=f, l=l, age=age[indices, ], T=T, method = 'SANN')
     
     ## Getting the estimate for bootstrapped sample
-    #bootstrap_mle <- log.mle.open(theta_init, bootstrap_sample, age)
+    bootstrap_mle <- log.mle.open(theta_init, bootstrap_sample, age[indices, ])
     
     ## Storing the results in the i-th row
-    bootstrap_estimates[j, ] <- bootstrap_mle$par
+    bootstrap_estimates[j, ] <- unlist(bootstrap_mle)
   }
   
   ## Calculating the bootstrap intervals and mean for the estimates
@@ -312,5 +313,14 @@ expected_m_array <- function(m, phi.open, p.open, T){
       ex_m[i,-1] <- ex_m[i,-1]/R
     }
   }
+  ## Returning the expected probabilities
   return(ex_m)
+}
+
+## Function to calculate AIC using log_likelihood at MLE
+AIC <- function(log_likelihood, n_par){
+  ## Calculating the AIC statistics
+  aic <- -2 * log_likelihood + 2* n_par
+  ## Return AIC score for the model
+  return(aic)
 }

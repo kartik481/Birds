@@ -16,7 +16,7 @@ source("~/Documents/Birds/closedlik.R")
 ## Loading the open_population file
 source("~/Documents/Birds/CJSlik.R")
 
-
+## Loading the chiffchaff dataset
 chifchaf <- read.csv("~/Documents/Birds/CR.chifchaf_FixRing.csv", sep =';'
                   ,header=TRUE)
 

@@ -16,7 +16,7 @@ source("~/Documents/Birds/closedlik.R")
 ## Loading the open_population file
 source("~/Documents/Birds/CJSlik.R")
 
-
+## Loading the robin dataset
 robin <- read.csv("~/Documents/Birds/CR.robin_FixRing.csv", sep =';'
                      ,header=TRUE)
 
@@ -41,12 +41,12 @@ cat("No. of zeros in data are:", zeros)
 robin <- robin[rowSums(robin[, -ncol(robin)] != 0) > 0, ]
 
 ## Getting unique value
-age.robinRing <- unique(robin$age.robin_at_ringing)
-cat("No. of unique values in age.robin_at_ringing:",age.robinRing)
+ageRing <- unique(robin$age_at_ringing)
+cat("No. of unique values in age_at_ringing:",ageRing)
 
 
 ## Getting the rows numbers where unkown is present and removing them
-rowNum <- which(robin$age.robin_at_ringing == "Unknown")
+rowNum <- which(robin$age_at_ringing == "Unknown")
 cat("Number of rows with unknown:",length(rowNum))
 
 ## Strong unknown observations in a separate dataFrame
@@ -59,15 +59,15 @@ robin <- robin[-rowNum, ]
 
 
 ## Plotting to see adults and juvenile cases
-ggplot(robin, aes(x = age.robin_at_ringing)) +
+ggplot(robin, aes(x = age_at_ringing)) +
   geom_bar(width = 0.5, color = "white", fill = "lightblue") +
   labs(title = "Histogram", x = "Values", y = "Frequency") +
   theme_minimal()
 
 
 ## Create separate data frames for adults and juveniles
-adultsrobin <- robin[robin$age.robin_at_ringing == "adult", ]
-juvenilesrobin <- robin[robin$age.robin_at_ringing == "juvenile", ]
+adultsrobin <- robin[robin$age_at_ringing == "adult", ]
+juvenilesrobin <- robin[robin$age_at_ringing == "juvenile", ]
 
 ## Printing the number of adults and juveniles
 cat('No. of adults in robin:', nrow(adultsrobin),'\n')
@@ -86,10 +86,10 @@ freq_1 <- apply(robin, 1, function(x) sum(x == 1))
 ## Creating a dataFrame for plotting
 df <- data.frame(Bird = paste0("Bird ", 1:nrow(robin)),
                  Frequency_1 = freq_1,
-                 age.robin = robin$age.robin_at_ringing)
+                 age = robin$age_at_ringing)
 
 ## Creating a density plot 
-ggplot(df, aes(x = Frequency_1, fill = age.robin, color = age.robin)) +
+ggplot(df, aes(x = Frequency_1, fill = age, color = age)) +
   geom_density(alpha = 0.5) +
   xlab("Frequency 1") +
   ylab("Density") +
@@ -124,7 +124,7 @@ plot(1:length(individualCaptureHistory), individualCaptureHistory, type = "b",
 
 
 
-## Removing the last column(age.robin at ringing) from the adult and juvenile data
+## Removing the last column(age at ringing) from the adult and juvenile data
 adultsrobin <- adultsrobin[, -ncol(adultsrobin)]
 juvenilesrobin <-juvenilesrobin[, -ncol(juvenilesrobin)]
 
@@ -182,7 +182,6 @@ print(p)
 
 ########################### Model fitting check ################################
 
-########################### Closed population ##################################
 
 
 n <- 77                                ## Total no initial occasions
@@ -190,7 +189,7 @@ occassions <- floor(n / 7)             ## Inter-winter period spans for 7 months
                                        ## So dividing by 7 to convert to yearly
 
 ## Storing age at initial ringing
-age.robin_ring <- robin$age.robin_at_ringing
+age_ring <- robin$age_at_ringing
 
 ## Removing the last column
 robin <- robin[,-ncol(robin)]
@@ -213,32 +212,32 @@ for(j in 1:nrow(robin)){
 cat('Birds captured over different inter-winter sessions','\n')
 cat(colSums(yearly_robin))
 
-## creating a age.robin matrix to store age according to time
-age.robin <- matrix(0, nrow = nrow(robin), ncol = occassions)
+## creating a age matrix to store age according to time
+age <- matrix(0, nrow = nrow(robin), ncol = occassions)
 
 ## Lopping over the data, if age at ringing at juvenile at first then keeping
 ## that time 1 otherwise after that it's gonna adult so adding 2 to show bird has
 ## become adult 
 for(i in 1:nrow(yearly_robin)){
-  age.robin_at_i <- age.robin_ring[i]
-  if(age.robin_at_i=='adult'){
+  age_at_i <- age_ring[i]
+  if(age_at_i=='adult'){
     first_cap <- which(yearly_robin[i,]>=1)[1]
-    age.robin[i, first_cap:occassions] <- age.robin[i, first_cap:occassions]+2
+    age[i, first_cap:occassions] <- age[i, first_cap:occassions]+2
     
   }
-  else if (age.robin_at_i=='juvenile'){
+  else if (age_at_i=='juvenile'){
     first_cap <- which(yearly_robin[i,]>=1)[1]
-    age.robin[i, first_cap] <- 1
+    age[i, first_cap] <- 1
     if(first_cap+1>11){
       next
     }
-    age.robin[i, (first_cap+1):occassions] <- age.robin[i, (first_cap+1):occassions]+2
+    age[i, (first_cap+1):occassions] <- age[i, (first_cap+1):occassions]+2
     
   }
 }
 
-## Printing the age.robin matrix
-print(age.robin)
+## Printing the age matrix
+print(age)
 
 
 n <- nrow(yearly_robin)            ## Total no of birds
@@ -247,7 +246,7 @@ theta.open <- runif(T+1)           ## Initialising the parameters
 
 
 ## Getting MLE for theta for open population
-theta.open.robin <- log.mle.open(theta.open, yearly_robin, age.robin.robin)
+theta.open.robin <- log.mle.open(theta.open, yearly_robin, age)
 
 ## Getting the parameters estimates
 param.open.robin <- popEstimate.open(theta.open.robin, T)
@@ -271,25 +270,43 @@ m <- m_array(yearly_robin, T)
 
 
 R <- unlist(colSums(yearly_robin)[-T])
-## Calculating the expected probabilities
-ex_m <- expected_m_array(R ,phi.open_adul.robin, p.open.robin, T)
+## Calculating the expected probabilities for juveniles and adults
+ex_m_juve <- expected_m_array(R ,phi.open_juve.robin, p.open.robin, T)
+ex_m_adul <- expected_m_array(R ,phi.open_adul.robin, p.open.robin, T)
 
 ## Removing the first column from observed and expected m-arrays
 m <- m[,-1]
-ex_m <- ex_m[,-1]
+ex_m_juve <- ex_m_juve[,-1]
+ex_m_adul <- ex_m_adul[,-1]
 
-## Adding small constant to mitigate numerical overflow
-eps <- 1e-100
+
 
 ## Doing a pearson chi-square test and calculating p-value using monte-carlo
 ## simulation 
-chi_square_test.open <- chisq.test(m+eps, ex_m+eps, simulate.p.value = TRUE)
+chi_square_test.open.juve <- chisq.test(table(m, ex_m_juve), simulate.p.value = TRUE)
 
 ## Fisher test for robin dataset
-fisher.test(table(m, ex_m), simulate.p.value = TRUE)
+fisher.test(matrix(cbind(m, ex_m_juve), nrow=n), simulate.p.value = TRUE)
 ## Printing the chi-square test results
-cat("Chi-square test statistic:","\n")
-chi_square_test.open
+cat("Chi-square test statistic for juveniles:","\n")
+chi_square_test.open.juve
+
+## Printing the chi-square test results
+cat("Chi-square test statistic for juveniles:","\n")
+chi_square_test.open.juve
+
+
+## Doing a pearson chi-square test and calculating p-value using monte-carlo
+## simulation 
+chi_square_test.open.adul <- chisq.test(table(m, ex_m_adul), 
+                                        simulate.p.value = TRUE)
+
+## Fisher test for robin dataset
+fisher.test(table(m, ex_m_adul), simulate.p.value = TRUE)
+## Printing the chi-square test results
+cat("Chi-square test statistic for adults:","\n")
+chi_square_test.open.adul
+
 
 ## According to multinomial assumption degrees of freedom can be defined as 
 ## df = k-1-d (where k=No of multinomial cells, d=Number of estimated parameters)
@@ -300,7 +317,7 @@ cat("Critical value is:", critical_value)
 
 ############################ Confidence intervals ##############################
 ## Calculating 95% CI for juveniles population for 300 samples
-ci.robin <- bootstrap_intervals.open(yearly_robin, T, 200, age.robin)
+ci.robin <- bootstrap_intervals.open(theta.open.robin, yearly_robin, T, 500, age)
 cat("95% CI for total popultion is:")
 cat(ci)
 

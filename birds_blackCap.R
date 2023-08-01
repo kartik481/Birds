@@ -16,7 +16,7 @@ source("~/Documents/Birds/closedlik.R")
 ## Loading the open_population file
 source("~/Documents/Birds/CJSlik.R")
 
-
+## Loading the blackcap dataset
 blackcap <- read.csv("~/Documents/Birds/CR.blackcap_FixRing.csv", sep =';'
                   ,header=TRUE)
 
