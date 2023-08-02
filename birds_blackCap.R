@@ -79,7 +79,7 @@ cat('No. of juveniles in blackcap:', nrow(juvenilesblackcap),'\n')
 juvenile_freq <- nrow(adultsblackcap)
 adult_freq <- nrow(juvenilesblackcap)
 
-## Getting the captured(1) and uncaptured(0) frequencies
+## Getting the captured(1) and uncaptured(0) frequenci.blackcapes
 freq_0 <- apply(blackcap, 1, function(x) sum(x == 0))
 freq_1 <- apply(blackcap, 1, function(x) sum(x == 1))
 
@@ -116,7 +116,7 @@ barplot(uniqueCaptureHistories, xlab = "Capture History", ylab = "Frequency",
 hist(captureCounts, breaks = max(captureCounts), xlab = "Number of Captures", 
      ylab = "Frequency", main = "Distribution of Capture Counts")
 
-## Plotting the recapture pattern for a specific individual (e.g.,individual 1)
+## Plotting the recapture pattern for a speci.blackcapfic individual (e.g.,individual 1)
 individualCaptureHistory <- blackcap[100, -ncol(blackcap)]
 plot(1:length(individualCaptureHistory), individualCaptureHistory, type = "b",
      pch = 19, xlab = "Capture Occasion", ylab = "Capture Status", 
@@ -145,13 +145,13 @@ plotblackcapadul$CapSum <- rowSums(plotblackcapadul)
 ## generating the month names from October 2007 to April 2018 
 Months <- seq(as.Date("2007-10-01"), as.Date("2018-04-01"), by = "months")
 
-# Exclude specific months from the sequence
+# Exclude speci.blackcapfic months from the sequence
 excluded_months <- grepl("May|June|July|August|September", format(Months, "%B"))
 
 # Convert the Months vector to a sequence of month names
 Months <- format(Months, format = "%B %Y")
 
-# Create a new sequence of months that excludes the specified months
+# Create a new sequence of months that excludes the speci.blackcapfied months
 Month <- Months[!excluded_months]
 
 ## Making a combined dataFrame for captured adults and juveniles
@@ -236,7 +236,7 @@ cat("AIC for age independent model:", AIC_cons)
 
 
 
-##################### Introducing age dependent CJS-model ######################
+##################### Introduci.blackcapng age dependent CJS-model ######################
 
 ## creating a age matrix to store age according to time
 age <- matrix(0, nrow = nrow(blackcap), ncol = occassions)
@@ -356,43 +356,55 @@ critical_value <- qchisq(1 - alpha, df)
 cat("Critical value is:", critical_value)
 
 ############################ Confidence intervals ##############################
-## Calculating 95% CI for juveniles population for 300 samples
-ci.blackcap <- bootstrap_intervals.open(theta.open.blackcap, yearly_blackcap, T, 500, age)
-cat("95% CI for total popultion is:")
-cat(ci)
+## Calculating 95% ci.blackcap for juveniles population for 300 samples
+ci.blackcap <- bootstrap_intervals.open(theta.open.blackcap, yearly_blackcap, T, 1000, age)
+cat("95% ci.blackcap for total popultion is:")
+ci.blackcap
 
 ## getting estimate for mean estimate
-param.open <- popEstimate.open(ci[[2]], T)
+param.open <- popEstimate.open(ci.blackcap[[2]], T)
 param.open.juve <- param.open[[1]]
 param.open.adul <- param.open[[2]]
 p.cons <-  param.open[[3]]
 
 ## Getting the estimate for lower confidence intervals
-param.open.lower <- popEstimate.open(ci$lower, T)
+param.open.lower <- popEstimate.open(ci.blackcap$lower, T)
 param.open.juve.lower <- param.open.lower[[1]]
 param.open.adul.lower <- param.open.lower[[2]]
 p.cons.lower <-  param.open.lower[[3]]
 
 ## Getting the estimate for upper confidence intervals
-param.open.upper <- popEstimate.open(ci$upper, T)
+param.open.upper <- popEstimate.open(ci.blackcap$upper, T)
 param.open.juve.upper <- param.open.upper[[1]]
 param.open.adul.upper <- param.open.upper[[2]]
 p.cons.upper <-  param.open.upper[[3]]
 
+## Printing the CI for recapture probability
+print(p.cons.lower)
+print(p.cons.upper)
 
 
 
 ## Creating a data frame to store the parameter estimates and corresponding 
 ## confidence intervals for juveniles
-parameter_df <- data.frame(Estimate = param.open.juve ,
-                           CI_lower = param.open.juve.lower,
-                           CI_upper = param.open.juve.upper)
+parameter_df.juve <- data.frame(Estimate = param.open.juve ,
+                                ci.blackcap_lower = param.open.juve.lower,
+                                ci.blackcap_upper = param.open.juve.upper)
+## Printing the resulted dataframe
+parameter_df.juve
 
+# Creating a data frame to store the parameter estimates and corresponding 
+## confidence intervals for adults
+parameter_df.adul <- data.frame(Estimate = param.open.adul,
+                                ci.blackcap_lower = param.open.adul.lower,
+                                ci.blackcap_upper = param.open.adul.upper)
+## Printing the dataframe
+parameter_df.adul
 ## Plotting the survivial probabilities with error bars
 
 ggplot(parameter_df, aes(x = as.factor(1:10), y = )) +
   geom_violin(trim=FALSE)+geom_boxplot(width = 0.5, position = position_dodge(width = 0.75), color = "black", alpha = 0.5) +
-  geom_pointrange(aes(ymin = CI_lower, ymax = CI_upper), width = 0.2, position = position_dodge(width = 0.75), color = "red") +
+  geom_pointrange(aes(ymin = ci.blackcap_lower, ymax = ci.blackcap_upper), width = 0.2, position = position_dodge(width = 0.75), color = "red") +
   labs(x = "Parameter", y = "Estimate") +
   ggtitle("Violin Plots of Parameter Estimates with 95% Confidence Intervals")
 
@@ -406,7 +418,7 @@ ggplot(parameter_df, aes(x = as.factor(1:10), y = )) +
 ## Getting the parameters estimates
 #p.closed <- popEstimate(theta.closed)
 
-## Calculating the sufficient statistics for obsevred data 
+## Calculating the suffici.blackcapent statistics for obsevred data 
 #observed.closed <-  colSums(yearly_blackcap)
 
 ## Calculating expected individuals monthly
