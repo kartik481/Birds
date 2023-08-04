@@ -282,32 +282,34 @@ m_array <- function(yearly_data, T){
   
   ## Below Example array taken from the book Analysis of capture-recapture data
   ## by morgan and MCcrea to check the functioning of m-arrays
-  #yearly_data <- matrix(0, nrow = 4, ncol = 5)
-  #yearly_data[1, 1] <- 0
-  #yearly_data[1, 2] <- 1
-  #yearly_data[1, 3] <- 0
-  #yearly_data[1, 4] <- 1
-  #yearly_data[1, 5] <- 1
+  # yearly_data <- matrix(0, nrow = 4, ncol = 5)
+  # yearly_data[1, 1] <- 0
+  # yearly_data[1, 2] <- 1
+  # yearly_data[1, 3] <- 0
+  # yearly_data[1, 4] <- 1
+  # yearly_data[1, 5] <- 1
+  # 
+  # yearly_data[2, 1] <- 0
+  # yearly_data[2, 2] <- 1
+  # yearly_data[2, 3] <- 0
+  # yearly_data[2, 4] <- 1
+  # yearly_data[2, 5] <- 0
+  # 
+  # yearly_data[3, 1] <- 1
+  # yearly_data[3, 2] <- 1
+  # yearly_data[3, 3] <- 0
+  # yearly_data[3, 4] <- 1
+  # yearly_data[3, 5] <- 1
+  # 
+  # yearly_data[4, 1] <- 1
+  # yearly_data[4, 2] <- 1
+  # yearly_data[4, 3] <- 1
+  # yearly_data[4, 4] <- 1
+  # yearly_data[4, 5] <- 1
+  # T <- 5
   
-  #yearly_data[2, 1] <- 0
-  #yearly_data[2, 2] <- 1
-  #yearly_data[2, 3] <- 0
-  #yearly_data[2, 4] <- 1
-  #yearly_data[2, 5] <- 0
   
-  #yearly_data[3, 1] <- 1
-  #yearly_data[3, 2] <- 1
-  #yearly_data[3, 3] <- 0
-  #yearly_data[3, 4] <- 1
-  #yearly_data[3, 5] <- 1
-  
-  #yearly_data[4, 1] <- 1
-  #yearly_data[4, 2] <- 1
-  #yearly_data[4, 3] <- 1
-  #yearly_data[4, 4] <- 1
-  #yearly_data[4, 5] <- 1
-  
-  ## creating a empty m-array matrix
+  ## creating a empty m-array matrix to store 
   m <- matrix(0, nrow = T-1, ncol = T)
   
   ## Calculating total number of capture in each capture occasion
@@ -326,11 +328,12 @@ m_array <- function(yearly_data, T){
     totalCap <- m[i, 1]
     for (j in (i+1):T) {
       cap_idx <- yearly_data[, j]
-      if (totalCap > 0 & sum(init_capidx ==1 & cap_idx==1)<=totalCap) {
-        m[i, j] <- sum(init_capidx ==1 & cap_idx==1)
+      curr_sum <- sum(init_capidx[init_capidx ==cap_idx])
+      if (totalCap > 0 & curr_sum<=totalCap) {
+        m[i, j] <- curr_sum
         totalCap <- totalCap - m[i, j]
       } 
-      else if(totalCap>=0 & sum(init_capidx==1 & cap_idx==1)>totalCap)
+      else if(totalCap>=0 & curr_sum>totalCap)
       {
         m[i,j] <- totalCap
         totalCap <- totalCap - m[i, j]
@@ -364,7 +367,7 @@ m_array <- function(yearly_data, T){
 }
 
 ## Function to create expected m-array
-expected_m_array <- function(m, phi.open, p.open, T){
+expected_m_array <- function(m, phi.open_juv, phi.open_adul, p.open, T){
   
   ## Creating a empty matrix for 
   ex_m <- matrix(0, nrow = T-1, ncol = T)
@@ -374,16 +377,21 @@ expected_m_array <- function(m, phi.open, p.open, T){
   ## Calculating the expected m-array
   for (i in 1:(T-2)) 
   {
-    ex_m[i, (i+1) ] <- m[i] * phi.open[i] * p.open
+    ex_m[i, (i+1) ] <- ex_m[i,1] * p.open * (phi.open_juv[i]+phi.open_adul[i])
     for (j in (i+2):T) 
     {
-      ex_m[i, j] <-  ex_m[i, (j-1)] * (1-p.open) * phi.open[j-1]
+      ex_m[i, j] <-  ex_m[i, (j-1)] * (1-p.open) * (phi.open_juv[j-1] + phi.open_adul[j-1])
     }
+    if(m[i]<  sum(ex_m[i,-1])){
+       N_exm[i] <- 0 
+    }
+    else{
     N_exm[i] <- m[i] - sum(ex_m[i,-1]) 
+    }
   }
   ## For last row
-  ex_m[T-1, T] <- m[T-1] * phi.open[T-1] * p.open
-  N_exm[T-1] <- m[T-1] - sum(ex_m[T-1,-1])
+  ex_m[T-1, T] <- ex_m[T-1,1] * (phi.open_juv[T-1] + phi.open_adul[T-1]) * p.open
+  N_exm[T-1] <- ex_m[T-1,1] - sum(ex_m[T-1,-1])
   
   ## Combining expected m-array with expected never captured again
   ex_m <- cbind(ex_m, N_exm)
@@ -409,4 +417,20 @@ AIC <- function(log_likelihood, n_par){
   aic <- -2 * log_likelihood + 2* n_par
   ## Return AIC score for the model
   return(aic)
+}
+
+## Function to calculate chi-square statistics 
+pearson_chi_square <- function(obs, ex, T){
+  test_statistics <- matrix(0, nrow = T-1, ncol = T)
+  ## Calulating the chi-square statistics for multinomial cells only
+  for (i in 1:(T-1)) {
+    for (j in (i):T){
+      if(ex[i,j]==0){
+        next
+      }
+      test_statistics[i,j] <- (obs[i,j]-ex[i,j])^2/ex[i,j]  
+    }
+  }
+  ## Returning the calculated statistics
+  return(sum(test_statistics))
 }

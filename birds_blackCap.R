@@ -10,6 +10,7 @@ library(tidyr)
 library(Rcapture)
 library(gridExtra)
 library(vcd)
+library(generalhoslem)
 
 ## Loading the closed_population file
 source("~/Documents/Birds/closedlik.R")
@@ -58,13 +59,6 @@ blackcap <- blackcap[-rowNum, ]
 
 
 
-## Plotting to see adults and juvenile cases
-ggplot(blackcap, aes(x = age_at_ringing)) +
-  geom_bar(width = 0.5, color = "white", fill = "lightblue") +
-  labs(title = "Histogram", x = "Values", y = "Frequency") +
-  theme_minimal()
-
-
 ## Create separate data frames for adults and juveniles
 adultsblackcap <- blackcap[blackcap$age_at_ringing == "adult", ]
 juvenilesblackcap <- blackcap[blackcap$age_at_ringing == "juvenile", ]
@@ -82,45 +76,6 @@ adult_freq <- nrow(juvenilesblackcap)
 ## Getting the captured(1) and uncaptured(0) frequenci.blackcapes
 freq_0 <- apply(blackcap, 1, function(x) sum(x == 0))
 freq_1 <- apply(blackcap, 1, function(x) sum(x == 1))
-
-## Creating a dataFrame for plotting
-df <- data.frame(Bird = paste0("Bird ", 1:nrow(blackcap)),
-                 Frequency_1 = freq_1,
-                 age = blackcap$age_at_ringing)
-
-## Creating a density plot 
-ggplot(df, aes(x = Frequency_1, fill = age, color = age)) +
-  geom_density(alpha = 0.5) +
-  xlab("Frequency 1") +
-  ylab("Density") +
-  scale_fill_manual(values = c("black", "red"), labels=c("Adult", "Juvenile")) +
-  scale_color_manual(values = c("black", "red"), labels= c("Adult", "Juvenile")) +
-  theme_minimal()
-
-
-
-
-
-## Calculate the number of captures for each individual
-captureCounts <- rowSums(blackcap[, -ncol(blackcap)])
-
-## Calculating the unique capture histories for each obseervation
-capture_histories <- apply(blackcap[, -ncol(blackcap)], 1, paste, collapse = "")
-uniqueCaptureHistories <- table(capture_histories)
-
-## Plotting the number of unique capture histories
-barplot(uniqueCaptureHistories, xlab = "Capture History", ylab = "Frequency", 
-        main = "Number of Unique Capture Histories")
-
-## Plotting the distribution of capture counts
-hist(captureCounts, breaks = max(captureCounts), xlab = "Number of Captures", 
-     ylab = "Frequency", main = "Distribution of Capture Counts")
-
-## Plotting the recapture pattern for a speci.blackcapfic individual (e.g.,individual 1)
-individualCaptureHistory <- blackcap[100, -ncol(blackcap)]
-plot(1:length(individualCaptureHistory), individualCaptureHistory, type = "b",
-     pch = 19, xlab = "Capture Occasion", ylab = "Capture Status", 
-     main = "Recapture Pattern - Individual")
 
 
 
@@ -266,6 +221,16 @@ for(i in 1:nrow(yearly_blackcap)){
 print(age)
 
 
+## Getting counts for juveniles and adults in each occassion
+get_counts <- function(col) {
+  table(col)
+}
+
+## Apply the function to each column of the age matrix
+age_counts <- apply(age, 2, get_counts)
+
+
+
 n <- nrow(yearly_blackcap)            ## Total no of birds
 T <- ncol(yearly_blackcap)            ## Total no. of capture occasions
 theta.open <- rnorm(T+1)           ## Initialising the parameters
@@ -305,55 +270,81 @@ cat(phi.open_adul.blackcap,'\n')
 
 ###################### Absolute goodness of fit test ###########################
 
+
+# juve_year <- matrix(0, nrow = n, ncol = T)
+# for(i in 1:n){
+#   for(j in 1:T){
+#     if(yearly_blackcap[i,j]>0 & age[i,j]==1){
+#       juve_year[i,j] <- yearly_blackcap[i,j]
+#     }
+#   }
+# }
+# 
+# adul_year <- matrix(0, nrow = n, ncol = T)
+# for(i in 1:n){
+#   for(j in 1:T){
+#     if(yearly_blackcap[i,j]>0 & age[i,j]==2){
+#       adul_year[i,j] <- yearly_blackcap[i,j]
+#     }
+#   }
+# }
+
 ## Calculating m-array probabilities for observed based on multinational assumption
-m <- m_array(yearly_blackcap, T)
+marray <- m_array(yearly_blackcap, T)
 
 
+## Total number of birds captued in each occassion
 R <- unlist(colSums(yearly_blackcap)[-T])
 ## Calculating the expected probabilities for juveniles and adults
-ex_m_juve <- expected_m_array(R ,phi.open_juve.blackcap, p.open.blackcap, T)
-ex_m_adul <- expected_m_array(R ,phi.open_adul.blackcap, p.open.blackcap, T)
+ex_m <- expected_m_array(R ,phi.open_juve.blackcap, phi.open_adul.blackcap, p.open.blackcap, T)
 
 ## Removing the first column from observed and expected m-arrays
-m <- m[,-1]
-ex_m_juve <- ex_m_juve[,-1]
-ex_m_adul <- ex_m_adul[,-1]
-
-
+marray <- marray[,-1]
+ex_m <- ex_m[,-1]
 
 ## Doing a pearson chi-square test and calculating p-value using monte-carlo
 ## simulation 
-chi_square_test.open.juve <- chisq.test(table(m, ex_m_juve), simulate.p.value = TRUE)
-
-## Fisher test for blackcap dataset
-fisher.test(table(m, ex_m_juve), simulate.p.value = TRUE)
-## Printing the chi-square test results
-cat("Chi-square test statistic for juveniles:","\n")
-chi_square_test.open.juve
-
-## Printing the chi-square test results
-cat("Chi-square test statistic for juveniles:","\n")
-chi_square_test.open.juve
-
-
-## Doing a pearson chi-square test and calculating p-value using monte-carlo
-## simulation 
-chi_square_test.open.adul <- chisq.test(table(m, ex_m_adul), 
-                                        simulate.p.value = TRUE)
-
-## Fisher test for blackcap dataset
-fisher.test(table(m, ex_m_adul), simulate.p.value = TRUE)
-## Printing the chi-square test results
-cat("Chi-square test statistic for adults:","\n")
-chi_square_test.open.adul
-
-
+chi_square_test.open <- chisq.test(table(marray, ex_m), 
+                                   simulate.p.value = TRUE)
 ## According to multinomial assumption degrees of freedom can be defined as 
 ## df = k-1-d (where k=No of multinomial cells, d=Number of estimated parameters)
 alpha<- 0.05
-df <- 47           #2924(for monthly data)
+df <- 47           
 critical_value <- qchisq(1 - alpha, df)
 cat("Critical value is:", critical_value)
+## Printing the results
+chi_square_test.open
+
+
+## Fisher test for blackcap dataset
+fisher.test(table(marray, ex_m), simulate.p.value = TRUE)
+idx <- 1
+
+## There are (T-1)*(T+2)/2 multinomial bins so creating vector of that length to 
+## store those values for observed m-array probabilities
+select_bin_m <- rep(0, (T-1)*(T+2)/2)
+for (i in 1:(T-1)) {
+  for (j in (i):T){
+    select_bin_m[idx]<- marray[i,j]
+    idx<- idx+1
+  }
+}
+## Doing the same thing for expected probabilities
+idx <- 1
+select_bin_exm <- rep(0, (T-1)*(T+2)/2)
+for (i in 1:(T-1)) {
+  for (j in (i):T){
+    select_bin_exm[idx]<- ex_m[i,j]
+    idx<- idx+1
+  }
+}
+
+
+## hosmer test for 11 different capture occassions
+logitgof(select_bin_m, select_bin_exm, g = 11, ord = FALSE)
+
+
+
 
 ############################ Confidence intervals ##############################
 ## Calculating 95% ci.blackcap for juveniles population for 300 samples

@@ -10,6 +10,7 @@ library(tidyr)
 library(Rcapture)
 library(gridExtra)
 library(vcd)
+library(generalhoslem)
 
 ## Loading the closed_population file
 source("~/Documents/Birds/closedlik.R")
@@ -58,13 +59,6 @@ chifchaf <- chifchaf[-rowNum, ]
 
 
 
-## Plotting to see adults and juvenile cases
-ggplot(chifchaf, aes(x = age_at_ringing)) +
-  geom_bar(width = 0.5, color = "white", fill = "lightblue") +
-  labs(title = "Histogram", x = "Values", y = "Frequency") +
-  theme_minimal()
-
-
 ## Create separate data frames for adults and juveniles
 adultschifchaf <- chifchaf[chifchaf$age_at_ringing == "adult", ]
 juvenileschifchaf <- chifchaf[chifchaf$age_at_ringing == "juvenile", ]
@@ -79,48 +73,9 @@ cat('No. of juveniles in chifchaf:', nrow(juvenileschifchaf),'\n')
 juvenile_freq <- nrow(adultschifchaf)
 adult_freq <- nrow(juvenileschifchaf)
 
-## Getting the captured(1) and uncaptured(0) frequencies
+## Getting the captured(1) and uncaptured(0) frequenci.chifchafes
 freq_0 <- apply(chifchaf, 1, function(x) sum(x == 0))
 freq_1 <- apply(chifchaf, 1, function(x) sum(x == 1))
-
-## Creating a dataFrame for plotting
-df <- data.frame(Bird = paste0("Bird ", 1:nrow(chifchaf)),
-                 Frequency_1 = freq_1,
-                 age = chifchaf$age_at_ringing)
-
-## Creating a density plot 
-ggplot(df, aes(x = Frequency_1, fill = age, color = age)) +
-  geom_density(alpha = 0.5) +
-  xlab("Frequency 1") +
-  ylab("Density") +
-  scale_fill_manual(values = c("black", "red"), labels=c("Adult", "Juvenile")) +
-  scale_color_manual(values = c("black", "red"), labels= c("Adult", "Juvenile")) +
-  theme_minimal()
-
-
-
-
-
-## Calculate the number of captures for each individual
-captureCounts <- rowSums(chifchaf[, -ncol(chifchaf)])
-
-## Calculating the unique capture histories for each obseervation
-capture_histories <- apply(chifchaf[, -ncol(chifchaf)], 1, paste, collapse = "")
-uniqueCaptureHistories <- table(capture_histories)
-
-## Plotting the number of unique capture histories
-barplot(uniqueCaptureHistories, xlab = "Capture History", ylab = "Frequency", 
-        main = "Number of Unique Capture Histories")
-
-## Plotting the distribution of capture counts
-hist(captureCounts, breaks = max(captureCounts), xlab = "Number of Captures", 
-     ylab = "Frequency", main = "Distribution of Capture Counts")
-
-## Plotting the recapture pattern for a specific individual (e.g.,individual 1)
-individualCaptureHistory <- chifchaf[100, -ncol(chifchaf)]
-plot(1:length(individualCaptureHistory), individualCaptureHistory, type = "b",
-     pch = 19, xlab = "Capture Occasion", ylab = "Capture Status", 
-     main = "Recapture Pattern - Individual")
 
 
 
@@ -145,13 +100,13 @@ plotchifchafadul$CapSum <- rowSums(plotchifchafadul)
 ## generating the month names from October 2007 to April 2018 
 Months <- seq(as.Date("2007-10-01"), as.Date("2018-04-01"), by = "months")
 
-# Exclude specific months from the sequence
+# Exclude speci.chifchaffic months from the sequence
 excluded_months <- grepl("May|June|July|August|September", format(Months, "%B"))
 
 # Convert the Months vector to a sequence of month names
 Months <- format(Months, format = "%B %Y")
 
-# Create a new sequence of months that excludes the specified months
+# Create a new sequence of months that excludes the speci.chifchaffied months
 Month <- Months[!excluded_months]
 
 ## Making a combined dataFrame for captured adults and juveniles
@@ -236,7 +191,7 @@ cat("AIC for age independent model:", AIC_cons)
 
 
 
-##################### Introducing age dependent CJS-model ######################
+##################### Introduci.chifchafng age dependent CJS-model ######################
 
 ## creating a age matrix to store age according to time
 age <- matrix(0, nrow = nrow(chifchaf), ncol = occassions)
@@ -264,6 +219,16 @@ for(i in 1:nrow(yearly_chifchaf)){
 
 ## Printing the age matrix
 print(age)
+
+
+## Getting counts for juveniles and adults in each occassion
+get_counts <- function(col) {
+  table(col)
+}
+
+## Apply the function to each column of the age matrix
+age_counts <- apply(age, 2, get_counts)
+
 
 
 n <- nrow(yearly_chifchaf)            ## Total no of birds
@@ -305,94 +270,132 @@ cat(phi.open_adul.chifchaf,'\n')
 
 ###################### Absolute goodness of fit test ###########################
 
+
+# juve_year <- matrix(0, nrow = n, ncol = T)
+# for(i in 1:n){
+#   for(j in 1:T){
+#     if(yearly_chifchaf[i,j]>0 & age[i,j]==1){
+#       juve_year[i,j] <- yearly_chifchaf[i,j]
+#     }
+#   }
+# }
+# 
+# adul_year <- matrix(0, nrow = n, ncol = T)
+# for(i in 1:n){
+#   for(j in 1:T){
+#     if(yearly_chifchaf[i,j]>0 & age[i,j]==2){
+#       adul_year[i,j] <- yearly_chifchaf[i,j]
+#     }
+#   }
+# }
+
 ## Calculating m-array probabilities for observed based on multinational assumption
-m <- m_array(yearly_chifchaf, T)
+marray <- m_array(yearly_chifchaf, T)
 
 
+## Total number of birds captued in each occassion
 R <- unlist(colSums(yearly_chifchaf)[-T])
 ## Calculating the expected probabilities for juveniles and adults
-ex_m_juve <- expected_m_array(R ,phi.open_juve.chifchaf, p.open.chifchaf, T)
-ex_m_adul <- expected_m_array(R ,phi.open_adul.chifchaf, p.open.chifchaf, T)
+ex_m <- expected_m_array(R ,phi.open_juve.chifchaf, phi.open_adul.chifchaf, p.open.chifchaf, T)
 
 ## Removing the first column from observed and expected m-arrays
-m <- m[,-1]
-ex_m_juve <- ex_m_juve[,-1]
-ex_m_adul <- ex_m_adul[,-1]
-
-
+marray <- marray[,-1]
+ex_m <- ex_m[,-1]
 
 ## Doing a pearson chi-square test and calculating p-value using monte-carlo
 ## simulation 
-chi_square_test.open.juve <- chisq.test(table(m, ex_m_juve), simulate.p.value = TRUE)
-
-## Fisher test for chifchaf dataset
-fisher.test(table(m, ex_m_juve), simulate.p.value = TRUE)
-## Printing the chi-square test results
-cat("Chi-square test statistic for juveniles:","\n")
-chi_square_test.open.juve
-
-## Printing the chi-square test results
-cat("Chi-square test statistic for juveniles:","\n")
-chi_square_test.open.juve
-
-
-## Doing a pearson chi-square test and calculating p-value using monte-carlo
-## simulation 
-chi_square_test.open.adul <- chisq.test(table(m, ex_m_adul), 
-                                        simulate.p.value = TRUE)
-
-## Fisher test for chifchaf dataset
-fisher.test(table(m, ex_m_adul), simulate.p.value = TRUE)
-## Printing the chi-square test results
-cat("Chi-square test statistic for adults:","\n")
-chi_square_test.open.adul
-
-
+chi_square_test.open <- chisq.test(table(marray, ex_m), 
+                                   simulate.p.value = TRUE)
 ## According to multinomial assumption degrees of freedom can be defined as 
 ## df = k-1-d (where k=No of multinomial cells, d=Number of estimated parameters)
 alpha<- 0.05
-df <- 47           #2924(for monthly data)
+df <- 47           
 critical_value <- qchisq(1 - alpha, df)
 cat("Critical value is:", critical_value)
+## Printing the results
+chi_square_test.open
+
+
+## Fisher test for chifchaf dataset
+fisher.test(table(marray, ex_m), simulate.p.value = TRUE)
+idx <- 1
+
+## There are (T-1)*(T+2)/2 multinomial bins so creating vector of that length to 
+## store those values for observed m-array probabilities
+select_bin_m <- rep(0, (T-1)*(T+2)/2)
+for (i in 1:(T-1)) {
+  for (j in (i):T){
+    select_bin_m[idx]<- marray[i,j]
+    idx<- idx+1
+  }
+}
+## Doing the same thing for expected probabilities
+idx <- 1
+select_bin_exm <- rep(0, (T-1)*(T+2)/2)
+for (i in 1:(T-1)) {
+  for (j in (i):T){
+    select_bin_exm[idx]<- ex_m[i,j]
+    idx<- idx+1
+  }
+}
+
+
+## hosmer test for 11 different capture occassions
+logitgof(select_bin_m, select_bin_exm, g = 11, ord = FALSE)
+
+
+
 
 ############################ Confidence intervals ##############################
-## Calculating 95% CI for juveniles population for 300 samples
-ci.chifchaf <- bootstrap_intervals.open(theta.open.chifchaf, yearly_chifchaf, T, 500, age)
-cat("95% CI for total popultion is:")
-cat(ci)
+## Calculating 95% ci.chifchaf for juveniles population for 300 samples
+ci.chifchaf <- bootstrap_intervals.open(theta.open.chifchaf, yearly_chifchaf, T, 1000, age)
+cat("95% ci.chifchaf for total popultion is:")
+ci.chifchaf
 
 ## getting estimate for mean estimate
-param.open <- popEstimate.open(ci[[2]], T)
+param.open <- popEstimate.open(ci.chifchaf[[2]], T)
 param.open.juve <- param.open[[1]]
 param.open.adul <- param.open[[2]]
 p.cons <-  param.open[[3]]
 
 ## Getting the estimate for lower confidence intervals
-param.open.lower <- popEstimate.open(ci$lower, T)
+param.open.lower <- popEstimate.open(ci.chifchaf$lower, T)
 param.open.juve.lower <- param.open.lower[[1]]
 param.open.adul.lower <- param.open.lower[[2]]
 p.cons.lower <-  param.open.lower[[3]]
 
 ## Getting the estimate for upper confidence intervals
-param.open.upper <- popEstimate.open(ci$upper, T)
+param.open.upper <- popEstimate.open(ci.chifchaf$upper, T)
 param.open.juve.upper <- param.open.upper[[1]]
 param.open.adul.upper <- param.open.upper[[2]]
 p.cons.upper <-  param.open.upper[[3]]
 
+## Printing the CI for recapture probability
+print(p.cons.lower)
+print(p.cons.upper)
 
 
 
 ## Creating a data frame to store the parameter estimates and corresponding 
 ## confidence intervals for juveniles
-parameter_df <- data.frame(Estimate = param.open.juve ,
-                           CI_lower = param.open.juve.lower,
-                           CI_upper = param.open.juve.upper)
+parameter_df.juve <- data.frame(Estimate = param.open.juve ,
+                                ci.chifchaf_lower = param.open.juve.lower,
+                                ci.chifchaf_upper = param.open.juve.upper)
+## Printing the resulted dataframe
+parameter_df.juve
 
+# Creating a data frame to store the parameter estimates and corresponding 
+## confidence intervals for adults
+parameter_df.adul <- data.frame(Estimate = param.open.adul,
+                                ci.chifchaf_lower = param.open.adul.lower,
+                                ci.chifchaf_upper = param.open.adul.upper)
+## Printing the dataframe
+parameter_df.adul
 ## Plotting the survivial probabilities with error bars
 
 ggplot(parameter_df, aes(x = as.factor(1:10), y = )) +
   geom_violin(trim=FALSE)+geom_boxplot(width = 0.5, position = position_dodge(width = 0.75), color = "black", alpha = 0.5) +
-  geom_pointrange(aes(ymin = CI_lower, ymax = CI_upper), width = 0.2, position = position_dodge(width = 0.75), color = "red") +
+  geom_pointrange(aes(ymin = ci.chifchaf_lower, ymax = ci.chifchaf_upper), width = 0.2, position = position_dodge(width = 0.75), color = "red") +
   labs(x = "Parameter", y = "Estimate") +
   ggtitle("Violin Plots of Parameter Estimates with 95% Confidence Intervals")
 
@@ -406,7 +409,7 @@ ggplot(parameter_df, aes(x = as.factor(1:10), y = )) +
 ## Getting the parameters estimates
 #p.closed <- popEstimate(theta.closed)
 
-## Calculating the sufficient statistics for obsevred data 
+## Calculating the suffici.chifchafent statistics for obsevred data 
 #observed.closed <-  colSums(yearly_chifchaf)
 
 ## Calculating expected individuals monthly
