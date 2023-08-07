@@ -1,3 +1,8 @@
+########## Contains functions used to estimate demographic parameters ##########
+
+## Loading the required packages 
+library(numDeriv)
+
 ## Printing message to confirm if we have linked files successfully
 cat('Loaded functions open population file successfully')
 
@@ -69,13 +74,17 @@ CJSlik_age <- function(theta, x, f, l, n, age, T) {
   
   ## Getting the parameter for juveniles
   alpha <- theta[1:(T-1)]
-  ## Getting the parameter beta
+  ## Getting the parameter beta for adults
   beta <- theta[T]
   
   ## Make phi age dependent using logit phi = alpha + beta(I=age)
   ## where I is indicator function
-  phi <- t(apply(age[, -11], 1, 
-function(row) exp(alpha + beta * (row - 1)) / (1 + exp(alpha + beta * (row - 1)))))
+  phi <- matrix(0, nrow = n, ncol = T-1)
+  for(i in 1:n){
+    for(j in 1:(T-1)){
+      phi[i,j] <- exp(alpha[j] + beta * (age[i,j]-1))/(1+exp(alpha[j] + beta * (age[i,j]-1)))
+    }
+  }
   ## Defining the recapture probability
   p <- exp(theta[T+1])/(1+exp(theta[T+1]))
   
@@ -116,7 +125,6 @@ function(row) exp(alpha + beta * (row - 1)) / (1 + exp(alpha + beta * (row - 1))
     # For such histories there is no information (and so can be omitted).
     
     # Add chi terms (probability of not being observed after time l[i])
-    
     lik[i] <- lik[i] + log(chi[i, l[i]])
     
   }
@@ -130,7 +138,7 @@ function(row) exp(alpha + beta * (row - 1)) / (1 + exp(alpha + beta * (row - 1))
   return(sumlik)
 }
 
-
+ 
 ## Function to maximize the log-likelihood to obtain MLE 
 log.mle.open <- function(theta, x){
   ## Getting the number of observations
@@ -140,9 +148,9 @@ log.mle.open <- function(theta, x){
   f <- rep(0, n)
   l <- rep(0, n)
   ## Stores first individual is observed
-  for (i in 1:n){f[i] <- which(x[i,]>=1)[1]}
+  for (i in 1:n){f[i] <- which(x[i,]==1)[1]}
   ## Storing the last time individual is observed
-  for (i in 1:n){l[i] <- which(x[i,]>=1)[length(which(x[i,]>=1))]}
+  for (i in 1:n){l[i] <- which(x[i,]==1)[length(which(x[i,]==1))]}
   ## Setting initial difference between old and estimate observed 
   diff <- 1
   ## Setting the tolerance value between new and old parameters
@@ -175,9 +183,9 @@ log.mle.open.age <- function(theta, x, age){
   f <- rep(0, n)
   l <- rep(0, n)
   ## Stores first individual is observed
-  for (i in 1:n){f[i] <- which(x[i,]>=1)[1]}
+  for (i in 1:n){f[i] <- which(x[i,]==1)[1]}
   ## Storing the last time individual is observed
-  for (i in 1:n){l[i] <- which(x[i,]>=1)[length(which(x[i,]>=1))]}
+  for (i in 1:n){l[i] <- which(x[i,]==1)[length(which(x[i,]==1))]}
   ## Setting initial difference between old and estimate observed 
   diff <- 1
   ## Setting the tolerance value between new and old parameters
@@ -189,13 +197,15 @@ log.mle.open.age <- function(theta, x, age){
     
     ## Using the optim to get MLE
     res <- optim(par = theta.old, fn = CJSlik_age, x=x, 
-    n=n, f=f, l=l, age=age, T=T, control = list(fnscale=-1))
+    n=n, f=f, l=l, age=age, T=T, control = list(fnscale=-1, maxit=20000), 
+    method = 'SANN')
     
     ## Storing the estimated MLEs for all parameters
     theta <- res$par
     ## updating the absolute difference between old and new estimates
     diff <- sum(abs(theta-theta.old))
   }
+  
   ## Returning the estimated parameters 
   return(theta)
 }
@@ -267,14 +277,8 @@ bootstrap_intervals.open <- function(theta, data, T, n_bootstrap, age) {
   mean <- apply(bootstrap_estimates, 2, mean)
   bootstrap_upper <- apply(bootstrap_estimates, 2, quantile, probs = 0.975)
   
-  # Calculate the standard deviation of the bootstrap estimates
-  sd_estimates <- apply(bootstrap_estimates, 2, sd)
-  
-  # Calculate the standard error (SE) for each estimate
-  se_estimates <- sd_estimates / sqrt(nrow(bootstrap_estimates))
-  
   ## Returning the bootstrap intervals
-  list(lower = bootstrap_lower, mean = mean, upper = bootstrap_upper, SE=se_estimates)
+  list(lower = bootstrap_lower, mean = mean, upper = bootstrap_upper)
 }
 
 ## Function for creating m-arrays and observed proabilities
@@ -288,19 +292,19 @@ m_array <- function(yearly_data, T){
   # yearly_data[1, 3] <- 0
   # yearly_data[1, 4] <- 1
   # yearly_data[1, 5] <- 1
-  # 
+  #  
   # yearly_data[2, 1] <- 0
   # yearly_data[2, 2] <- 1
   # yearly_data[2, 3] <- 0
   # yearly_data[2, 4] <- 1
   # yearly_data[2, 5] <- 0
-  # 
+  #  
   # yearly_data[3, 1] <- 1
   # yearly_data[3, 2] <- 1
   # yearly_data[3, 3] <- 0
   # yearly_data[3, 4] <- 1
   # yearly_data[3, 5] <- 1
-  # 
+  #  
   # yearly_data[4, 1] <- 1
   # yearly_data[4, 2] <- 1
   # yearly_data[4, 3] <- 1
@@ -417,20 +421,4 @@ AIC <- function(log_likelihood, n_par){
   aic <- -2 * log_likelihood + 2* n_par
   ## Return AIC score for the model
   return(aic)
-}
-
-## Function to calculate chi-square statistics 
-pearson_chi_square <- function(obs, ex, T){
-  test_statistics <- matrix(0, nrow = T-1, ncol = T)
-  ## Calulating the chi-square statistics for multinomial cells only
-  for (i in 1:(T-1)) {
-    for (j in (i):T){
-      if(ex[i,j]==0){
-        next
-      }
-      test_statistics[i,j] <- (obs[i,j]-ex[i,j])^2/ex[i,j]  
-    }
-  }
-  ## Returning the calculated statistics
-  return(sum(test_statistics))
 }

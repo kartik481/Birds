@@ -1,3 +1,5 @@
+####################### Visualising the data jointly ###########################
+
 ## Loading the blackcap dataset
 blackcap <- read.csv("~/Documents/Birds/CR.blackcap_FixRing.csv", sep =';'
                      ,header=TRUE)

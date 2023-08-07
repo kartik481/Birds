@@ -1,9 +1,9 @@
 ############################ Birds project #####################################
-
+############################ blackcap estimates #############################
 ## setting the seed
 set.seed(123)
 
-## Loading the Libraries
+## Loading the required Libraries
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -11,10 +11,9 @@ library(Rcapture)
 library(gridExtra)
 library(vcd)
 library(generalhoslem)
+library(ResourceSelection)
 
-## Loading the closed_population file
-source("~/Documents/Birds/closedlik.R")
-## Loading the open_population file
+## Loading the open_population file 
 source("~/Documents/Birds/CJSlik.R")
 
 ## Loading the blackcap dataset
@@ -158,18 +157,28 @@ for(j in 1:nrow(blackcap)){
     start_idx <- (i - 1) * 7 + 1
     end_idx <- i * 7
     prod <- blackcap[j, start_idx : end_idx]
-    product <- sum(prod)
-    yearly_blackcap[j, i] <- product
+    total <- sum(prod)
+    yearly_blackcap[j, i] <- total
   }
 }
+
+
 ## Getting the total number of birds captured yearly
 cat('Birds captured over different inter-winter sessions','\n')
 cat(colSums(yearly_blackcap))
 
+for(k in 1:nrow(yearly_blackcap)){
+  for(j in 1:ncol(yearly_blackcap)){
+    if(yearly_blackcap[k,j]!=0){
+      yearly_blackcap[k,j]=1
+    }
+  }
+}
+
 
 n <- nrow(yearly_blackcap)            ## Total no of birds
 T <- ncol(yearly_blackcap)            ## Total no. of capture occasions
-theta.open <- rnorm(T)           ## Initialising the parameters
+theta.open <- rnorm(T)                ## Initialising the parameters
 
 
 
@@ -186,15 +195,15 @@ for (i in 1:n){l[i] <- which(yearly_blackcap[i,]>=1)[length(which(yearly_blackca
 ## Caluclating the vale of log_likeihood at MLE
 log_lik <- CJSlik(theta.open.blackcap.cons, yearly_blackcap, f, l, n, T)
 ## Getting the AIC 
-AIC_cons <- AIC(log_lik, 11)
+AIC_cons <- AIC(log_lik, 10)
 cat("AIC for age independent model:", AIC_cons)
 
 
 
-##################### Introduci.blackcapng age dependent CJS-model ######################
+##################### Age dependent CJS-model #################################
 
 ## creating a age matrix to store age according to time
-age <- matrix(0, nrow = nrow(blackcap), ncol = occassions)
+age <- matrix(0, nrow = nrow(blackcap), ncol = ncol(yearly_blackcap))
 
 ## Lopping over the data, if age at ringing at juvenile at first then keeping
 ## that time 1 otherwise after that it's gonna adult so adding 2 to show bird has
@@ -202,12 +211,12 @@ age <- matrix(0, nrow = nrow(blackcap), ncol = occassions)
 for(i in 1:nrow(yearly_blackcap)){
   age_at_i <- age_ring[i]
   if(age_at_i=='adult'){
-    first_cap <- which(yearly_blackcap[i,]>=1)[1]
+    first_cap <- which(yearly_blackcap[i,]==1)[1]
     age[i, first_cap:occassions] <- age[i, first_cap:occassions]+2
     
   }
   else if (age_at_i=='juvenile'){
-    first_cap <- which(yearly_blackcap[i,]>=1)[1]
+    first_cap <- which(yearly_blackcap[i,]==1)[1]
     age[i, first_cap] <- 1
     if(first_cap+1>11){
       next
@@ -217,23 +226,47 @@ for(i in 1:nrow(yearly_blackcap)){
   }
 }
 
-## Printing the age matrix
-print(age)
+# for(i in 1:nrow(blackcap)){
+#   age_at_i <- age_ring[i]
+#   if(age_at_i=='adult'){
+#     first_cap <- which(blackcap[i,]==1)[1]
+#     age[i, first_cap:ncol(blackcap)] <- age[i, first_cap:ncol(blackcap)]+2
+#     
+#   }
+#   else if (age_at_i=='juvenile'){
+#     first_cap <- which(blackcap[i,]==1)[1]
+#     if(first_cap+1>78){
+#       next
+#     }
+#     else if(first_cap+6>=77){
+#       age[i, first_cap:ncol(blackcap)] <- age[i, first_cap:ncol(blackcap)]+1
+#     }
+#     else{
+#       if(first_cap+7<=77){
+#         age[i, first_cap:(first_cap+6)]<-age[i, first_cap:(first_cap+6)]+1
+#         age[i, (first_cap+7):ncol(blackcap)]<-age[i, (first_cap+7):ncol(blackcap)]+2
+#       }
+#     }
+#   }
+# }
+
+## viewing the age matrix
+#View(age)
 
 
-## Getting counts for juveniles and adults in each occassion
-get_counts <- function(col) {
-  table(col)
-}
-
-## Apply the function to each column of the age matrix
-age_counts <- apply(age, 2, get_counts)
+# ## Getting counts for juveniles and adults in each occassion
+# get_counts <- function(col) {
+#   table(col)
+# }
+# 
+# ## Apply the function to each column of the age matrix
+# age_counts <- apply(age, 2, get_counts)
 
 
 
 n <- nrow(yearly_blackcap)            ## Total no of birds
 T <- ncol(yearly_blackcap)            ## Total no. of capture occasions
-theta.open <- rnorm(T+1)           ## Initialising the parameters
+theta.open <- runif(T+1)           ## Initialising the parameters
 
 
 ## Getting MLE for theta for open population
@@ -243,14 +276,16 @@ theta.open.blackcap <- log.mle.open.age(theta.open, yearly_blackcap, age)
 f <- rep(0, n)
 l <- rep(0, n)
 ## Stores first individual is observed
-for (i in 1:n){f[i] <- which(yearly_blackcap[i,]>=1)[1]}
+for (i in 1:n){f[i] <- which(yearly_blackcap[i,]==1)[1]}
 ## Storing the last time individual is observed
-for (i in 1:n){l[i] <- which(yearly_blackcap[i,]>=1)[length(which(yearly_blackcap[i,]>=1))]}
+for (i in 1:n){l[i] <- which(yearly_blackcap[i,]==1)[length(which(yearly_blackcap[i,]==1))]}
 ## Caluclating the vale of log_likeihood at MLE
 log_lik_age <- CJSlik_age(theta.open.blackcap, yearly_blackcap, f, l, n, age, T)
 ## Getting the AIC 
-AIC_age <- AIC(log_lik_age, 12)
+AIC_age <- AIC(log_lik_age, 10)
 cat("AIC for age dependent model:", AIC_age)
+
+
 
 ## Getting the parameters estimates
 param.open.blackcap <- popEstimate.open(theta.open.blackcap, T)
@@ -270,33 +305,15 @@ cat(phi.open_adul.blackcap,'\n')
 
 ###################### Absolute goodness of fit test ###########################
 
-
-# juve_year <- matrix(0, nrow = n, ncol = T)
-# for(i in 1:n){
-#   for(j in 1:T){
-#     if(yearly_blackcap[i,j]>0 & age[i,j]==1){
-#       juve_year[i,j] <- yearly_blackcap[i,j]
-#     }
-#   }
-# }
-# 
-# adul_year <- matrix(0, nrow = n, ncol = T)
-# for(i in 1:n){
-#   for(j in 1:T){
-#     if(yearly_blackcap[i,j]>0 & age[i,j]==2){
-#       adul_year[i,j] <- yearly_blackcap[i,j]
-#     }
-#   }
-# }
-
-## Calculating m-array probabilities for observed based on multinational assumption
+## Calculating m-array probabilities for observed data
 marray <- m_array(yearly_blackcap, T)
 
 
 ## Total number of birds captued in each occassion
 R <- unlist(colSums(yearly_blackcap)[-T])
 ## Calculating the expected probabilities for juveniles and adults
-ex_m <- expected_m_array(R ,phi.open_juve.blackcap, phi.open_adul.blackcap, p.open.blackcap, T)
+ex_m <- expected_m_array(R ,phi.open_juve.blackcap, phi.open_adul.blackcap, 
+                         p.open.blackcap, T)
 
 ## Removing the first column from observed and expected m-arrays
 marray <- marray[,-1]
@@ -339,18 +356,18 @@ for (i in 1:(T-1)) {
   }
 }
 
+## hosmer test for absolute goodness of fit test
+hoslem.test(select_bin_m, select_bin_exm, g=11)
 
-## hosmer test for 11 different capture occassions
-logitgof(select_bin_m, select_bin_exm, g = 11, ord = FALSE)
-
+result <- xmulti(select_bin_m, select_bin_exm, safety = 1e+15)
+cat("p-value using multinomial goodness of fit test:", result$observedProb)
 
 
 
 ############################ Confidence intervals ##############################
-## Calculating 95% ci.blackcap for juveniles population for 300 samples
-ci.blackcap <- bootstrap_intervals.open(theta.open.blackcap, yearly_blackcap, T, 1000, age)
+## Calculating 95% ci.blackcap for juveniles population for 500 samples
+ci.blackcap <- bootstrap_intervals.open(theta.open.blackcap, yearly_blackcap, T, 500, age)
 cat("95% ci.blackcap for total popultion is:")
-ci.blackcap
 
 ## getting estimate for mean estimate
 param.open <- popEstimate.open(ci.blackcap[[2]], T)
@@ -378,49 +395,70 @@ print(p.cons.upper)
 
 ## Creating a data frame to store the parameter estimates and corresponding 
 ## confidence intervals for juveniles
-parameter_df.juve <- data.frame(Estimate = param.open.juve ,
-                                ci.blackcap_lower = param.open.juve.lower,
-                                ci.blackcap_upper = param.open.juve.upper)
+parameter_df.juve <- data.frame(TimePoint = seq(1,10),
+                                Estimate = phi.open_juve.blackcap ,
+                                ci.blackcap_lower.juve = param.open.juve.lower,
+                                ci.blackcap_upper.juve = param.open.juve.upper)
 ## Printing the resulted dataframe
 parameter_df.juve
 
 # Creating a data frame to store the parameter estimates and corresponding 
 ## confidence intervals for adults
-parameter_df.adul <- data.frame(Estimate = param.open.adul,
-                                ci.blackcap_lower = param.open.adul.lower,
-                                ci.blackcap_upper = param.open.adul.upper)
+parameter_df.adul <- data.frame(TimePoint = seq(1,10), 
+                                Estimate = phi.open_adul.blackcap,
+                                ci.blackcap_lower.adul = param.open.adul.lower,
+                                ci.blackcap_upper.dul = param.open.adul.upper)
 ## Printing the dataframe
 parameter_df.adul
-## Plotting the survivial probabilities with error bars
-
-ggplot(parameter_df, aes(x = as.factor(1:10), y = )) +
-  geom_violin(trim=FALSE)+geom_boxplot(width = 0.5, position = position_dodge(width = 0.75), color = "black", alpha = 0.5) +
-  geom_pointrange(aes(ymin = ci.blackcap_lower, ymax = ci.blackcap_upper), width = 0.2, position = position_dodge(width = 0.75), color = "red") +
-  labs(x = "Parameter", y = "Estimate") +
-  ggtitle("Violin Plots of Parameter Estimates with 95% Confidence Intervals")
 
 
-############################ Closed population model ##########################
 
-#theta.closed <- runif(T+1)
-## Getting MLE for theta
-#theta.closed <- log.mle.closed(theta.closed, yearly_blackcap, T)
+# Create a data frame for the juvenile and adult data
+juvenile_data <- data.frame(
+  Session = c("2007-2008", "2008-2009", "2009-2010", "2010-2011", "2011-2012", 
+              "2012-2013", "2013-2014", "2014-2015", "2015-2016", "2016-2017"),
+  phi_MLE = phi.open_juve.blackcap,
+  CI_lower = param.open.juve.lower,
+  CI_upper = param.open.juve.upper
+)
 
-## Getting the parameters estimates
-#p.closed <- popEstimate(theta.closed)
+adult_data <- data.frame(
+  Session = c("2007-2008", "2008-2009", "2009-2010", "2010-2011", "2011-2012", 
+              "2012-2013", "2013-2014", "2014-2015", "2015-2016", "2016-2017"),
+  phi_MLE = phi.open_adul.blackcap,
+  CI_lower = param.open.adul.lower,
+  CI_upper = param.open.adul.upper
+)
 
-## Calculating the suffici.blackcapent statistics for obsevred data 
-#observed.closed <-  colSums(yearly_blackcap)
+# Combine the data for plotting
+combined_data <- rbind(
+  transform(juvenile_data, Group = "Juveniles"),
+  transform(adult_data, Group = "Adults")
+)
 
-## Calculating expected individuals monthly
-## Calculating the expected captures in a year
-#total_individuals.closed <- p.closed
-#expected.closed <- theta.closed * total_individuals.closed
-#expected.closed <- round(expected.closed[-length(expected.closed)])
 
-## Pearson chi-square test between observed and expected
-#chi_square_test.closed <- chisq.test(observed.closed, expected.closed)
+# Create a new numeric column to represent the sessions
+combined_data$NumericSession <- as.numeric(factor(combined_data$Session))
 
-## Print the chi-square test results
-#cat("Chi-square test:","\n")
-#chi_square_test.closed
+# Adjust the x-axis position for adults and juveniles
+combined_data <- transform(combined_data,
+                           Position = ifelse(Group == "Adults", NumericSession + 0.2, NumericSession - 0.2))
+## Adding colors to different species
+custom_colors <- c("green3", "red2")
+# Create the plot
+plot <- ggplot(combined_data, aes(x = Position, y = phi_MLE, color = Group, group = Group)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper), width = 0.2) +
+  geom_point(position = position_dodge(width = 0.1), size = 3) +  # Adjust dodge width and point size
+  labs(title = "Survival Probability Estimates for Blackcap birds",
+       y = "Survival Probability",
+       x = "Session") +
+  scale_x_continuous(breaks = combined_data$Position, labels = combined_data$Session) +  # Use adjusted positions for labels and breaks
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 11), plot.title = element_text(hjust = 0.5))
+
+## Adding the colors
+plot <- plot + scale_color_manual(values = custom_colors)
+# Print the plot
+print(plot)
