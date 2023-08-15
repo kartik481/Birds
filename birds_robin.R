@@ -14,7 +14,8 @@ library(generalhoslem)
 library(ResourceSelection)
 library(XNomial)
 
-## Loading the open_population file 
+## Loading the open_population file in which functions for maximising different
+## models are stored(Please change the file path accordingly)
 source("~/Documents/Birds/CJSlik.R")
 
 ## Loading the robin dataset

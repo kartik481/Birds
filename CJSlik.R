@@ -1,6 +1,5 @@
 ########## Contains functions used to estimate demographic parameters ##########
 
-library(reshape2)
 ## Printing message to confirm if we have linked files successfully
 cat('Loaded functions open population file successfully')
 
@@ -12,6 +11,7 @@ inverse.logit <- function(x) {
 }
 
 ####################### Different likelihood functions #########################
+########################## For different models ################################ 
 
 CJSlik <- function(theta, x, f, l, n, T) {
   # The data are stored in the array x;
@@ -97,9 +97,9 @@ CJSlik.age.cons <- function(theta, x, f, l, n, age, T) {
   
   # Calculate the chi terms: probability of not observed after time t for each 
   # individual separately because as phi is dependent on age 
-  # Initially set up chi to be an array of length T all elements equal to 1
-  # chi[T] <- 1
-  # Calculate chi[1:T-1] using recursive formula
+  # Initially set up chi to be an matrix of size n*T all elements equal to 1
+  # chi[i,T] <- 1
+  # Calculate chi[i,1:T-1] using recursive formula
   
   chi <- matrix(1, nrow = n, ncol = T)
   
@@ -184,9 +184,9 @@ CJSlik.age.var <- function(theta, x, f, l, n, age, T) {
   
   # Calculate the chi terms: probability of not observed after time t for each 
   # individual separately because as phi is dependent on age 
-  # Initially set up chi to be an array of length T all elements equal to 1
-  # chi[T] <- 1
-  # Calculate chi[1:T-1] using recursive formula
+  # Initially set up chi to be an matrix of n*T all elements equal to 1
+  # chi[i,T] <- 1
+  # Calculate chi[i,1:T-1] using recursive formula
   
   chi <- matrix(1, nrow = n, ncol = T)
   
