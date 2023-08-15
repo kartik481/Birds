@@ -14,7 +14,8 @@ library(generalhoslem)
 library(ResourceSelection)
 library(XNomial)
 
-## Loading the open_population file 
+## Loading the open_population file in which functions for maximising different
+## models are stored
 source("~/Documents/Birds/CJSlik.R")
 
 ## Loading the chifchaf dataset
@@ -189,20 +190,6 @@ theta.open <- rnorm(T)                ## Initialising the parameters
 ## Getting MLE for theta for open population
 theta.open.chifchaf.cons <- log.mle.open(theta.open, yearly_chifchaf)
 
-## creating empty arrays to store initial and final capture occasions
-f <- rep(0, n)
-l <- rep(0, n)
-## Stores first individual is observed
-for (i in 1:n){f[i] <- which(yearly_chifchaf[i,]>=1)[1]}
-## Storing the last time individual is observed
-for (i in 1:n){l[i] <- which(yearly_chifchaf[i,]>=1)[length(which(yearly_chifchaf[i,]>=1))]}
-## Caluclating the vale of log_likeihood at MLE
-log_lik <- CJSlik(theta.open.chifchaf.cons, yearly_chifchaf, f, l, n, T)
-## Getting the AIC 
-AIC_cons <- AIC(log_lik, 10)
-cat("AIC for age independent model:", AIC_cons)
-
-
 
 ##################### Age dependent CJS-model ##################################
 ##################### with constant recapture ##################################
@@ -263,20 +250,20 @@ for(i in 1:nrow(yearly_chifchaf)){
 
 n <- nrow(yearly_chifchaf)            ## Total no of birds
 T <- ncol(yearly_chifchaf)            ## Total no. of capture occasions
-theta.open <- runif(T+1)           ## Initialising the parameters
+theta.open <- rep(0.5, T+1)           ## Initialising the parameters
 
 
 ## Getting MLE for theta for open population
 theta.open.chifchaf.p.cons <- log.mle.open.age.p.cons(theta.open, yearly_chifchaf, age)
 
 
+
 ######################### Varying recapture probability #########################
-######################## as well as varying survival ############################
 
 
 n <- nrow(yearly_chifchaf)            ## Total no of birds
 T <- ncol(yearly_chifchaf)            ## Total no. of capture occasions
-theta.open <- runif(22)           ## Initialising the parameters
+theta.open <- rep(0.1, 22)           ## Initialising the parameters
 
 
 ## Getting MLE for theta for open population
@@ -284,23 +271,8 @@ theta.open.chifchaf.var <- log.mle.open.age.p.var(theta.open, yearly_chifchaf,
                                                   age)
 
 
-## Getting the parameters estimates
-param.open.chifchaf <- popEstimate.open(theta.open.chifchaf.var, T, 0)
+##################### Relative goodness of fit tests ###########################
 
-## Extracting the paramters
-phi.open_juve.chifchaf <- param.open.chifchaf[[1]]
-phi.open_adul.chifchaf <- param.open.chifchaf[[2]]
-p.open.chifchaf <- param.open.chifchaf[[3]]
-
-## Printing the results
-cat('The recapture probability is: \n')
-cat(p.open.chifchaf,'\n')
-cat('Juvenile survival probability is: \n')
-cat(phi.open_juve.chifchaf,'\n')
-cat('Adult survival probability is: \n')
-cat(phi.open_adul.chifchaf,'\n')
-
-#########################. Relative goodness of fit tests ######################
 
 ## creating empty arrays to store initial and final capture occasions
 f <- rep(0, n)
@@ -311,8 +283,19 @@ for (i in 1:n){f[i] <- which(yearly_chifchaf[i,]==1)[1]}
 for (i in 1:n){l[i] <- which(yearly_chifchaf[i,]==1)[length(which(yearly_chifchaf[i,]==1))]}
 
 
-## Caluclating the vale of log_likeihood at MLE for constant recapture and 
-## time varying survival probabilties
+## Caluclating the vale of log_likeihood at MLE
+log_lik <- CJSlik(theta.open.chifchaf.cons, yearly_chifchaf, f, l, n, T)
+## Getting the AIC 
+AIC_cons <- AIC(log_lik, 10)
+cat("AIC for age independent model:", AIC_cons)
+## Getting the BIC 
+BIC_cons <- BIC(log_lik, nrow(yearly_chifchaf), 10)
+cat("BIC for age dependent and constant recapture probability are:", BIC_cons)
+
+
+
+## Caluclating the value of log_likeihood at MLE for constant recapture and 
+## age dependence
 log_lik_age <- CJSlik.age.cons(theta.open.chifchaf.p.cons, yearly_chifchaf, f, l, n, age, T)
 ## Getting the AIC 
 AIC_age <- AIC(log_lik_age, 10)
@@ -322,9 +305,7 @@ BIC_age <- BIC(log_lik_age, nrow(yearly_chifchaf), 10)
 cat("BIC for age dependent and constant recapture probability are:", BIC_age)
 
 
-
-## Caluclating the vale of log_likeihood at MLE for both time-varying recapture
-## and survival
+## Caluclating the vale of log_likeihood at MLE
 log_lik_age.var <- CJSlik.age.var(theta.open.chifchaf.var, yearly_chifchaf, f, 
                                   l, n,  age, T)
 ## Getting the AIC 
@@ -337,6 +318,7 @@ cat("BIC for age dependent and varying recapture probability are:", BIC_age_p)
 
 
 ################## Getting the parameters based on best model ##################
+
 
 # Getting the parameters estimates
 param.open.chifchaf <- popEstimate.open(theta.open.chifchaf.p.cons, T, 1)
@@ -353,6 +335,7 @@ cat('Juvenile survival probability is: \n')
 cat(phi.open_juve.chifchaf,'\n')
 cat('Adult survival probability is: \n')
 cat(phi.open_adul.chifchaf,'\n')
+
 
 
 ###################### Absolute goodness of fit test ###########################
@@ -411,7 +394,6 @@ for (i in 1:(T-1)) {
 ## hosmer test for absolute goodness of fit test
 hoslem.test(select_bin_m, select_bin_exm, g=11)
 
-
 ############################ Confidence intervals ##############################
 ## Number of non-parameteric bootstrap samples to take
 n_bootstrap <- 500
@@ -432,8 +414,8 @@ for (j in 1:n_bootstrap) {
   ## Initialize the parameter values for optimization
   theta_init <- theta.open.chifchaf.p.cons
   
-  bootstrap_mle <- log.mle.open.age.p.cons(theta_init, bootstrap_sample, 
-                                           age[indices, ])
+  bootstrap_mle <- log.mle.open.age.p.cons(theta_init, yearly_chifchaf[indices,], 
+                                           age[indices,])
   ## Storing the results in the i-th row
   bootstrap_estimates[j, ] <- unlist(bootstrap_mle)
 }
@@ -465,31 +447,15 @@ print(p.cons.upper)
 
 
 
-## Creating a data frame to store the parameter estimates and corresponding 
-## confidence intervals for juveniles
-juvenile_data <- data.frame(TimePoint = seq(1,10),
-                                Estimate = phi.open_juve.chifchaf ,
-                                CI_Lower = param.open.juve.lower,
-                                CI_Upper = param.open.juve.upper)
-## Printing the resulted dataframe
-juvenile_data
 
-# Creating a data frame to store the parameter estimates and corresponding 
-## confidence intervals for adults
-adult_data <- data.frame(TimePoint = seq(1,10), 
-                                Estimate = phi.open_adul.chifchaf,
-                                CI_Lower = param.open.adul.lower,
-                                CI_Upper = param.open.adul.upper)
-
-
-
-# Create a data frame for the juvenile and adult data
+## Create a data frame for the juvenile and adult data with upper 95% CI and
+## lower 95% CI
 juvenile_data <- data.frame(
   Session = c("2007-2008", "2008-2009", "2009-2010", "2010-2011", "2011-2012", 
               "2012-2013", "2013-2014", "2014-2015", "2015-2016", "2016-2017"),
-  phi_MLE = phi.open_juve.chifchaf,
-  CI_lower = param.open.juve.lower,
-  CI_upper = param.open.juve.upper
+  Estimate = phi.open_juve.chifchaf,
+  CI_Lower = param.open.juve.lower,
+  CI_Upper = param.open.juve.upper
 )
 
 adult_data <- data.frame(
@@ -504,7 +470,7 @@ adult_data <- data.frame(
 # Set the common y-axis limits
 y_axis_limits <- c(0, 1)
 
-## making the plot for survival probability with 95% confidence intervals
+## Printing the plot for juveniles with 95% CI
 p <- ggplot(juvenile_data, aes(x = Session, y = Estimate, group = 1)) +
   geom_line(color = "blue") +
   geom_point(color = "red", size = 3) +
@@ -517,12 +483,12 @@ p <- ggplot(juvenile_data, aes(x = Session, y = Estimate, group = 1)) +
   theme(legend.position = "right",
         plot.title = element_text(hjust = 0.5),  # Center-align plot title
         axis.text.x = element_text(angle = 45, hjust = 1, size = 12)) + 
-        guides(color = guide_legend(title = "Legend"))  # Adjust x-axis text size
+  guides(color = guide_legend(title = "Legend"))  # Adjust x-axis text size
 
 # Print the plot
 print(p)
 
-## making the same plot for adults
+## Printing the plot for adults with 95% CI
 p <- ggplot(adult_data, aes(x = Session, y = Estimate, group = 1)) +
   geom_line(color = "blue") +
   geom_point(color = "red", size = 3) +

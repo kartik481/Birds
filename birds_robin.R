@@ -319,6 +319,32 @@ cat("BIC for age dependent and varying recapture probability are:", BIC_age_p)
 ################## Getting the parameters based on best model ##################
 
 
+## Function to maximise the best model based on SANN algorithm
+log.mle.open.age.p.cons.ro <- function(theta, x, age){
+  ## Getting the number of observations
+  n <- nrow(x)
+  T <- ncol(x)
+  ## creating empty arrays to store initial and final capture occasions
+  f <- rep(0, n)
+  l <- rep(0, n)
+  ## Stores first individual is observed
+  for (i in 1:n){f[i] <- which(x[i,]==1)[1]}
+  ## Storing the last time individual is observed
+  for (i in 1:n){l[i] <- which(x[i,]==1)[length(which(x[i,]==1))]}
+  ## Using the optim to get MLE
+  res <- optim(par = theta, fn = CJSlik.age.cons, x=x, 
+               n=n, f=f, l=l, age=age, T=T, control = list(fnscale=-1), 
+               method = "BFGS")
+  ## Storing the estimated MLEs for all parameters
+  theta <- res$par
+  ## Returning the paramters
+  return(theta)
+}
+
+## getting the MLE for best model
+theta.open.robin.p.cons <- log.mle.open.age.p.cons.ro(theta.open.robin.p.cons, 
+                                                      yearly_robin, age)
+
 # Getting the parameters estimates
 param.open.robin <- popEstimate.open(theta.open.robin.p.cons, T, 1)
 
@@ -392,11 +418,9 @@ for (i in 1:(T-1)) {
 
 ## hosmer test for absolute goodness of fit test
 hoslem.test(select_bin_m, select_bin_exm, g=11)
-
-
 ############################ Confidence intervals ##############################
 ## Number of non-parameteric bootstrap samples to take
-n_bootstrap <- 50
+n_bootstrap <- 500
 
 ## Total Number of observed individuals
 total_n <- nrow(yearly_robin)
@@ -414,8 +438,8 @@ for (j in 1:n_bootstrap) {
   ## Initialize the parameter values for optimization
   theta_init <- theta.open.robin.p.cons
   
-  bootstrap_mle <- log.mle.open.age.p.cons(theta_init, yearly_robin, 
-                                           age)
+  bootstrap_mle <- log.mle.open.age.p.cons(theta_init, yearly_robin[indices,], 
+                                           age[indices,])
   ## Storing the results in the i-th row
   bootstrap_estimates[j, ] <- unlist(bootstrap_mle)
 }
@@ -441,14 +465,13 @@ param.open.juve.upper <- param.open.upper[[1]]
 param.open.adul.upper <- param.open.upper[[2]]
 p.cons.upper <-  param.open.upper[[3]]
 
-## Printing the CI for recapture probability
+## Printing the 95% upper and lower CI for recapture probability
 print(p.cons.lower)
 print(p.cons.upper)
 
 
-
-
-# Create a data frame for the juvenile and adult data
+# Create the data frame for juveniles with sessions as years, MLEs and 95% upper and
+## lower CI
 juvenile_data <- data.frame(
   Session = c("2007-2008", "2008-2009", "2009-2010", "2010-2011", "2011-2012", 
               "2012-2013", "2013-2014", "2014-2015", "2015-2016", "2016-2017"),
@@ -457,6 +480,9 @@ juvenile_data <- data.frame(
   CI_Upper = param.open.juve.upper
 )
 
+
+# Create the data frame for adults with sessions as years, MLEs and 95% upper and
+## lower CI
 adult_data <- data.frame(
   Session = c("2007-2008", "2008-2009", "2009-2010", "2010-2011", "2011-2012", 
               "2012-2013", "2013-2014", "2014-2015", "2015-2016", "2016-2017"),
@@ -465,10 +491,10 @@ adult_data <- data.frame(
   CI_Upper = param.open.adul.upper
 )
 
-
-# Set the common y-axis limits
+## Setting the common y-axis limits for below two graphs
 y_axis_limits <- c(0, 1)
 
+## Printing the plot for juveniles with 95% CI
 p <- ggplot(juvenile_data, aes(x = Session, y = Estimate, group = 1)) +
   geom_line(color = "blue") +
   geom_point(color = "red", size = 3) +
@@ -486,7 +512,7 @@ p <- ggplot(juvenile_data, aes(x = Session, y = Estimate, group = 1)) +
 # Print the plot
 print(p)
 
-
+## Printing the plot for adults with 95% CI
 p <- ggplot(adult_data, aes(x = Session, y = Estimate, group = 1)) +
   geom_line(color = "blue") +
   geom_point(color = "red", size = 3) +

@@ -14,12 +14,13 @@ library(generalhoslem)
 library(ResourceSelection)
 library(XNomial)
 
-## Loading the open_population file 
+## Loading the open_population file in which functions for maximising different
+## models are stored(Change according to your directory)
 source("~/Documents/Birds/CJSlik.R")
 
 ## Loading the blackcap dataset
 blackcap <- read.csv("~/Documents/Birds/CR.blackcap_FixRing.csv", sep =';'
-                  ,header=TRUE)
+                     ,header=TRUE)
 
 ## Printing the dimensions of the blackcap DataFrame
 cat("Dimension of blackcap data is:", dim(blackcap))
@@ -249,7 +250,7 @@ for(i in 1:nrow(yearly_blackcap)){
 
 n <- nrow(yearly_blackcap)            ## Total no of birds
 T <- ncol(yearly_blackcap)            ## Total no. of capture occasions
-theta.open <- rep(0.1, T+1)           ## Initialising the parameters
+theta.open <- rep(0.5, T+1)           ## Initialising the parameters
 
 
 ## Getting MLE for theta for open population
@@ -267,7 +268,7 @@ theta.open <- rep(0.1, 22)           ## Initialising the parameters
 
 ## Getting MLE for theta for open population
 theta.open.blackcap.var <- log.mle.open.age.p.var(theta.open, yearly_blackcap, 
-                                               age)
+                                                  age)
 
 
 ##################### Relative goodness of fit tests ###########################
@@ -318,8 +319,6 @@ cat("BIC for age dependent and varying recapture probability are:", BIC_age_p)
 
 ################## Getting the parameters based on best model ##################
 
-## Getting MLE for theta for open population
-theta.open.blackcap.cons <- log.mle.open(theta.open, yearly_blackcap)
 
 # Getting the parameters estimates
 param.open.blackcap <- popEstimate.open(theta.open.blackcap.p.cons, T, 1)
@@ -395,10 +394,9 @@ for (i in 1:(T-1)) {
 ## hosmer test for absolute goodness of fit test
 hoslem.test(select_bin_m, select_bin_exm, g=11)
 
-
 ############################ Confidence intervals ##############################
 ## Number of non-parameteric bootstrap samples to take
-n_bootstrap <- 50
+n_bootstrap <- 500
 
 ## Total Number of observed individuals
 total_n <- nrow(yearly_blackcap)
@@ -413,11 +411,11 @@ for (j in 1:n_bootstrap) {
   indices <- sample(1:sample_size, size = sample_size, replace = TRUE)
   ## Generating a bootstrap sample by resampling from the original data
   bootstrap_sample <- yearly_blackcap[indices, ]
-  ## Initialize the parameter values for optimization
+  ## Initialize the parameter values for optimization based on MLE
   theta_init <- theta.open.blackcap.p.cons
   
-  bootstrap_mle <- log.mle.open.age.p.cons(theta_init, yearly_blackcap, 
-                                           age)
+  bootstrap_mle <- log.mle.open.age.p.cons(theta_init, yearly_blackcap[indices,], 
+                                           age[indices,])
   ## Storing the results in the i-th row
   bootstrap_estimates[j, ] <- unlist(bootstrap_mle)
 }
@@ -450,7 +448,8 @@ print(p.cons.upper)
 
 
 
-# Create a data frame for the juvenile and adult data
+## Create a data frame for the juvenile and adult data with upper 95% CI and
+## lower 95% CI
 juvenile_data <- data.frame(
   Session = c("2007-2008", "2008-2009", "2009-2010", "2010-2011", "2011-2012", 
               "2012-2013", "2013-2014", "2014-2015", "2015-2016", "2016-2017"),
@@ -471,6 +470,7 @@ adult_data <- data.frame(
 # Set the common y-axis limits
 y_axis_limits <- c(0, 1)
 
+## Printing the plot for juveniles with 95% CI
 p <- ggplot(juvenile_data, aes(x = Session, y = Estimate, group = 1)) +
   geom_line(color = "blue") +
   geom_point(color = "red", size = 3) +
@@ -488,7 +488,7 @@ p <- ggplot(juvenile_data, aes(x = Session, y = Estimate, group = 1)) +
 # Print the plot
 print(p)
 
-
+## Printing the plot for adults with 95% CI
 p <- ggplot(adult_data, aes(x = Session, y = Estimate, group = 1)) +
   geom_line(color = "blue") +
   geom_point(color = "red", size = 3) +

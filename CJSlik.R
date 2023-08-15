@@ -278,7 +278,7 @@ log.mle.open.age.p.cons <- function(theta, x, age){
   ## Using the optim to get MLE
   res <- optim(par = theta, fn = CJSlik.age.cons, x=x, 
           n=n, f=f, l=l, age=age, T=T, control = list(fnscale=-1), 
-          method = "SANN")
+          method = "BFGS")
   ## Storing the estimated MLEs for all parameters
   theta <- res$par
   ## Returning the paramters
@@ -403,19 +403,19 @@ m_array <- function(yearly_data, T){
   m <- cbind(m, NCap)
   # print(m)
   # 
-  # ## Calculating the observed probabilities in m-array
-  # for (i in 1:(T-1)) {
-  #   R <- m[i,1]
-  #   ## Skipping if the total captured on occasion i==0 
-  #   if(R==0){
-  #     next
-  #   }
-  #   
-  #   else{
-  #     ## Calculating the observed probability
-  #     m[i,-1] <- m[i,-1]/R
-  #   }
-  # }
+   ## Calculating the observed probabilities in m-array
+   for (i in 1:(T-1)) {
+     R <- m[i,1]
+     ## Skipping if the total captured on occasion i==0 
+     if(R==0){
+       next
+     }
+     
+     else{
+       ## Calculating the observed probability
+       m[i,-1] <- m[i,-1]/R
+     }
+   }
   
   
   ## returning the converted m-array probabilities
@@ -433,37 +433,38 @@ expected_m_array <- function(m, phi.open_juv, phi.open_adul, p.open, T){
   ## Calculating the expected m-array
   for (i in 1:(T-2)) 
   {
-    ex_m[i, (i+1) ] <- ex_m[i,1] * p.open * (phi.open_juv[i]+phi.open_adul[i])
+    ex_m[i, (i+1)] <- ex_m[i,1] * p.open * (phi.open_juv[i]+phi.open_adul[i])
     for (j in (i+2):T) 
     {
       ex_m[i, j] <-  ex_m[i, (j-1)] * (1-p.open) * (phi.open_juv[j-1] + phi.open_adul[j-1])
     }
-    if(m[i]<  sum(ex_m[i,-1])){
-      N_exm[i] <- 0 
-    }
+      if( m[i] - sum(ex_m[i,-1])<0){
+        N_exm[i]<-0
+      }
     else{
       N_exm[i] <- m[i] - sum(ex_m[i,-1]) 
+      }
     }
-  }
   ## For last row
   ex_m[T-1, T] <- ex_m[T-1,1] * (phi.open_juv[T-1] + phi.open_adul[T-1]) * p.open
   N_exm[T-1] <- ex_m[T-1,1] - sum(ex_m[T-1,-1])
   
-  ## Combining expected m-array with expected never captured again
-  ex_m <- cbind(ex_m, N_exm)
+  ex_m = cbind(ex_m, N_exm)
   
-  for (i in 1:(T-1)) {
-    R <- m[i]
-    
-    if(R==0){
-      next
+  ## calculating the frequencies of the expected m-arrays
+   for (i in 1:(T-1)) {
+       R <- m[i]
+      
+      if(R==0){
+        next
+      }
+      
+      else{
+        ex_m[i,-1] <- ex_m[i,-1]/R
+      }
     }
-    
-    else{
-      ex_m[i,-1] <- ex_m[i,-1]/R
-    }
-  }
-  ## Returning the expected probabilities
+  
+  ## Combining expected m-array with expected never captured again
   return(ex_m)
 }
 
@@ -482,52 +483,3 @@ BIC <- function(log_likelihood, n_obs, n_par) {
   return(bic)
 }
 
-hosmer_lemeshow_test <- function(obs, pred, g = 11) {
-  yhat <- as.data.frame(pred)
-  qq <- unique(quantile(1 - yhat[, 1], probs = seq(0, 1, 1/g)))
-  cutyhats <- cut(1 - yhat[, 1], breaks = qq, include.lowest = TRUE)
-  dfobs <- data.frame(obs, cutyhats)
-  dfobsmelt <- melt(dfobs, id.vars = 12)
-  observed <- cast(dfobsmelt, cutyhats ~ value, length)
-  names(observed)[names(observed) != "cutyhats"] <- paste0("y_", names(observed)[names(observed) != "cutyhats"])
-  observed <- observed[order(c(1, names(observed[, 2:ncol(observed)])))]
-  dfexp <- data.frame(yhat, cutyhats)
-  dfexpmelt <- melt(dfexp, id.vars = ncol(dfexp))
-  expected <- cast(dfexpmelt, cutyhats ~ variable, sum)
-  expected <- expected[order(c(1, names(expected[, 2:ncol(expected)])))]
-  names(expected)[names(expected) != "cutyhats"] <- paste0("y_", names(expected)[names(expected) != "cutyhats"])
-  
-  print(dim(observed))
-  print(dim(expected))
-  n <- 0
-  if(ncol(observed)<= ncol(expected)){
-    n <- ncol(observed)
-  }
-  else{
-    n <- ncol(expected)
-  }
-  print(expected)
-  chisq <- 0
-  for (i in 2:n) {
-    for (j in 1:nrow(observed)) {
-      if (expected[j, i] == 0) {
-        next
-      } else {
-        chisq <- chisq + (observed[j, i] - expected[j, i])^2 / expected[j, i]
-      }
-    }
-  }
-  
-  # Calculate the degrees of freedom.
-  df <- g - 2
-  
-  # Calculate the p-value.
-  p_value <- 1 - pchisq(chisq, df)
-  
-  # Return the results.
-  return(list(
-    chi_squared = chisq,
-    df = df,
-    p_value = p_value
-  ))
-}
