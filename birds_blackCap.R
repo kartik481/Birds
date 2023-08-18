@@ -12,7 +12,6 @@ library(gridExtra)
 library(vcd)
 library(generalhoslem)
 library(ResourceSelection)
-library(XNomial)
 
 ## Loading the open_population file in which functions for maximising different
 ## models are stored(Change according to your directory)
@@ -165,10 +164,6 @@ for(j in 1:nrow(blackcap)){
 }
 
 
-## Getting the total number of birds captured yearly
-cat('Birds captured over different inter-winter sessions','\n')
-cat(colSums(yearly_blackcap))
-
 
 ## Since the data should be binary putting 1 in places where birds are recaptured
 ## otherwise 0
@@ -179,6 +174,12 @@ for(k in 1:nrow(yearly_blackcap)){
     }
   }
 }
+
+## Getting the total number of birds captured yearly in each session
+cat('Birds captured over different inter-winter sessions','\n')
+cat(colSums(yearly_blackcap))
+
+
 
 
 n <- nrow(yearly_blackcap)            ## Total no of birds
